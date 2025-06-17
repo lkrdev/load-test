@@ -6,6 +6,7 @@ from enum import Enum
 from typing import Annotated, List, Optional
 
 import looker_sdk
+from looker_sdk.sdk.api40.models import User
 import typer
 from dotenv import load_dotenv
 
@@ -19,6 +20,7 @@ from locust import events
 from locust.env import Environment
 
 import gevent
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 
 app = typer.Typer(name="lkr", no_args_is_help=True)
 group = typer.Typer(name="load-test", no_args_is_help=True)
@@ -73,7 +75,12 @@ def main(
     ] = None,
 ):
     load_dotenv(dotenv_path=env_file, override=True)
-    if ctx.invoked_subcommand in ["load-test", "load-test:query", "debug"]:
+    if ctx.invoked_subcommand in [
+        "load-test",
+        "load-test:query",
+        "debug",
+        "remove-embed-users",
+    ]:
         validate_api_credentials(
             client_id=client_id, client_secret=client_secret, base_url=base_url
         )
@@ -514,6 +521,103 @@ def load_test_embed_observability(
     if runner.spawning_greenlet:
         runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
     runner.greenlet.join()
+
+
+@group.command(name="delete-embed-users")
+def delete_embed_users(
+    first_name: Annotated[
+        str | None,
+        typer.Option(
+            help="First name of the user to remove",
+        ),
+    ] = "Embed",
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            help="Do not delete the users, just print the users that would be deleted",
+        ),
+    ] = True,
+    limit: Annotated[
+        int,
+        typer.Option(
+            help="Limit the number of users to remove",
+        ),
+    ] = 100,
+):
+    """
+    Remove all embed users for a dashboard
+    """
+
+    sdk = looker_sdk.init40()
+    all_users: List[User] = []
+    offset = 0
+    batch_size = 10  # Number of concurrent get_users calls
+    if not first_name:
+        typer.echo("No first name provided, will delete all embed users")
+
+    def get_users(*, first_name: str | None, limit: int, offset: int):
+        return sdk.search_users(
+            first_name=first_name if first_name else None,
+            embed_user=True,
+            limit=limit,
+            offset=offset,
+            fields="id,first_name,last_name",
+        )
+
+    while True:
+        futures = []
+        with ThreadPoolExecutor(max_workers=batch_size) as executor:
+            # Submit batch_size number of get_users calls
+            for i in range(batch_size):
+                futures.append(
+                    executor.submit(
+                        get_users,
+                        first_name=first_name,
+                        limit=limit,
+                        offset=offset + (i * limit),
+                    )
+                )
+
+            # Wait for all futures to complete
+            wait(futures)
+
+            # Check results and collect users
+            should_continue = True
+            for future in futures:
+                response = future.result()
+                if len(response) != limit:
+                    should_continue = False
+                all_users.extend(response)
+
+            # If any response had less than limit users, we've found all users
+            if not should_continue:
+                break
+
+            # Move offset for next batch
+            offset += batch_size * limit
+
+    if dry_run:
+        typer.echo(f"Found {len(all_users)} users")
+        return
+    else:
+        typer.echo(f"Deleting {len(all_users)} users")
+        # Process the found users in parallel
+        with ThreadPoolExecutor(max_workers=batch_size) as executor:
+            futures = []
+            for user in all_users:
+                if user.id:
+                    futures.append(executor.submit(sdk.delete_user, user.id))
+
+            # Wait for all deletions to complete
+            for future in as_completed(futures):
+                try:
+                    future.result()
+                    user = all_users[futures.index(future)]
+                    typer.echo(
+                        f"Deleted user {user.first_name} {user.last_name} ({user.id})"
+                    )
+                except Exception as e:
+                    typer.echo(f"Error deleting user: {str(e)}")
 
 
 if __name__ == "__main__":

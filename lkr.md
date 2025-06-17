@@ -39,6 +39,7 @@ $ lkr load-test [OPTIONS] COMMAND [ARGS]...
 * `query`
 * `render`
 * `embed-observability`: Open dashboards with observability metrics.
+* `delete-embed-users`: Remove all embed users for a dashboard
 
 ### `lkr load-test debug`
 
@@ -159,4 +160,21 @@ $ lkr load-test embed-observability [OPTIONS]
 * `--log-event-prefix TEXT`: Prefix to add to the log event  [default: looker-embed-observability]
 * `--open-url / --no-open-url`: Do not open the URL in the observability browser, useful for viewing a user&#x27;s embed dashboard when running locally  [default: open-url]
 * `--debug`: Enable debug mode
+* `--help`: Show this message and exit.
+
+### `lkr load-test delete-embed-users`
+
+Remove all embed users for a dashboard
+
+**Usage**:
+
+```console
+$ lkr load-test delete-embed-users [OPTIONS]
+```
+
+**Options**:
+
+* `--first-name TEXT`: First name of the user to remove  [default: Embed]
+* `--dry-run / --no-dry-run`: Do not delete the users, just print the users that would be deleted  [default: dry-run]
+* `--limit INTEGER`: Limit the number of users to remove  [default: 100]
 * `--help`: Show this message and exit.
