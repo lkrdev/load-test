@@ -64,9 +64,9 @@ uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute 
 
 
 ```
-docker run --pull=always gcr.io/looker-load-tests/lkr-test:latest lkr --client=id=abc --client-secret=123 --base-url=https://your-looker-instance.cloud.looker.com load-test dashboard --dashboard=1 --users=5 --run-time=1
+docker run --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr --client=id=abc --client-secret=123 --base-url=https://your-looker-instance.cloud.looker.com load-test dashboard --dashboard=1 --users=5 --run-time=1
 
-docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/lkr-load-test lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
+docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
 ```
 
 ### Example Deploy with Cloud Run Job
@@ -75,7 +75,7 @@ This is an example job to run a load test on a dashboard with 200 users for 10 m
 
 ```
 gcloud run jobs create lkr-help-job \
-    --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/lkr-load-test \
+    --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
     --command='lkr' \
     --args='load-test dashboard --dashboard=1 --users=20 --run-time=10 --model=thelook' \
     --project=your-gcp-project-id \
