@@ -7,6 +7,7 @@ A command-line tool for load testing Looker dashboards, queries, rendered dashbo
 - `lkr load-test query`: Run a load test on a query.
 - `lkr load-test render`: Run a load test on a rendered dashboard.
 - `lkr load-test embed-observability`: Open dashboards with observability metrics in an embedded context.
+- `lkr load-test delete-embed-users`: Delete all embed users that were created by this tool. Identifiable by their first name "Embed".
 
 ## How it works
 The command line tool is a wrapper around the Looker SDK. It uses the Looker SDK to create concurrent **embed** users to run queries, dashboards, and schedules as unique users.
@@ -42,6 +43,9 @@ lkr load-test dashboard --dashboard=1 --users=5 --attribute store:random.randint
 ## Arguments
 
 See all command line arguments [here](./lkr.md)
+
+### Handling multiple values
+Attributes, models, and permissions can be specified multiple times to create a list of values. For example if you need multiple models for the user you can do `lkr load-test dashboard --dashboard=1 --users=5 --model=thelook --model=thelook2` will create a user with the models `thelook` and `thelook2`. For attributes, you can do `lkr load-test dashboard --dashboard=1 --users=5 --attribute=store:random.randint(1,100) --attribute=region:west` will create a user with the attributes `store:random.randint(1,100)` and `region:west`.
 
 
 ## Running Locally
@@ -93,6 +97,15 @@ gcloud run jobs create lkr-help-job \
 
 After the job is created, you can see open up [Google Cloud Run Jobs](https://console.cloud.google.com/run/jobs) and iterate from there.
 
-### Known Issues
+One common pattern is to run multiple jobs with different parameters, testing more than just a single use case. With Cloud Run Jobs, you can run a set of jobs once, edit the configuration with other parameters (e.g., dashboard=1 then query=abc123) and run again. Executing the jobs one after the other will parallelize the different parameters.
+
+## Viewing the results
+
+For dashboard, query, and render tests, the recomenndation is to use the Looker System Activity to view the results. A successful outcome is having the task end gracefully and your target number of users or queries was reached. From there you can analyze database or dashboard performance from within system activity. 
+
+For a more centralized view of the results for each session, consider using `lkr load-test embed-observability` to log observability metrics to logs. This will include each session, dashboard load time, each tile's run time and a full dashboard complete event. Since these are structured logs, you can use your tool of choice to analyze the results or choose to sink them to a data warehouse.
+
+## Known Issues
 - If you are using a database connection that requires OAuth, this approach will not work.
 - If you are on Looker Core, you will need to be in an embed instance to run this tool. If you are using the query load test, your looker client id and client secret must be an [API only Service Account](https://cloud.google.com/looker/docs/looker-core-user-management#creating_an_api-only_service_account).
+
