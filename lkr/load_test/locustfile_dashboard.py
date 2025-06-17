@@ -59,14 +59,15 @@ class DashboardUser(User):
         else:
             raise Exception("Failed to get sso url")
 
-    def on_stop(self):
-        self.driver.quit()
-        if self.cleanup_user and self.sdk and self.user_id:
-            user = self.sdk.user_for_credential("embed", self.user_id, "id")
+    # TODO: Causing greenlet issues
+    # def on_stop(self):
+    #     self.driver.quit()
+    #     if self.cleanup_user and self.sdk and self.user_id:
+    #         user = self.sdk.user_for_credential("embed", self.user_id, "id")
 
-            if user and user.id:
-                self.sdk.delete_user(user.id)
-        return
+    #         if user and user.id:
+    #             self.sdk.delete_user(user.id)
+    #     return
 
     @task
     def do_nothing(self):

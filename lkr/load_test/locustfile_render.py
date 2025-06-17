@@ -27,7 +27,7 @@ class RenderUser(User):
     run_once: bool = False
     height: int = 1080
     width: int = 1920
-    cleanup_user: bool = True
+    cleanup_user: bool = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,11 +69,12 @@ class RenderUser(User):
     def on_start(self):
         self.sdk = self._init_sdk()
 
-    def on_stop(self):
-        if self.cleanup_user and self.sdk and self.user_id:
-            user = self.sdk.user_for_credential("embed", self.user_id)
-            if user and user.id:
-                self.sdk.delete_user(user.id)
+    # TODO: Causing greenlet issues
+    # def on_stop(self):
+    #     if self.cleanup_user and self.sdk and self.user_id:
+    #         user = self.sdk.user_for_credential("embed", self.user_id)
+    #         if user and user.id:
+    #             self.sdk.delete_user(user.id)
 
     @task
     def render_dashboard(self):

@@ -70,11 +70,12 @@ class DashboardUserObservability(User):
         # Initialize the SDK - make sure to set your environment variables
         self.sdk = looker_sdk.init40()
 
-    def on_stop(self):
-        if self.cleanup_user and self.sdk and self.user_id:
-            user = self.sdk.user_for_credential("embed", self.user_id)
-            if user and user.id:
-                self.sdk.delete_user(user.id)
+    # TODO: Causing greenlet issues
+    # def on_stop(self):
+    #     if self.cleanup_user and self.sdk and self.user_id:
+    #         user = self.sdk.user_for_credential("embed", self.user_id)
+    #         if user and user.id:
+    #             self.sdk.delete_user(user.id)
 
     @task
     def open_embed_dashboard(self):

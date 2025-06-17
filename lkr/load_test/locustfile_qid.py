@@ -125,11 +125,12 @@ class QueryUser(User):
         if self.sticky_sessions:
             self.sdk = self._init_sdk()
 
-    def on_stop(self):
-        if self.cleanup_user and self.sdk and self.user_id:
-            user = self.sdk.user_for_credential("embed", self.user_id, "id")
-            if user and user.id:
-                self.sdk.delete_user(user.id)
+    # TODO: Causing greenlet issues
+    # def on_stop(self):
+    #     if self.cleanup_user and self.sdk and self.user_id:
+    #         user = self.sdk.user_for_credential("embed", self.user_id, "id")
+    #         if user and user.id:
+    #             self.sdk.delete_user(user.id)
 
     @task
     def run_query(self):
