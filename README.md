@@ -78,7 +78,7 @@ docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSD
 This is an example job to run a load test on a dashboard with 200 users for 10 minutes for dashboard id 1.  Note that the dashboard has [Auto Refresh](https://cloud.google.com/looker/docs/editing-user-defined-dashboards#autorefresh) enabled. If you do not have auto refresh enabled, then the user will load the dashboard and just sit there without running more queries. Cloud Run Jobs let you manage multiple concurrent jobs and scale them up and down as needed with --tasks; this is the fastest easiest way to run a large scale load test.
 
 ```
-gcloud run jobs create lkr-help-job \
+gcloud run jobs create lkr-load-test-dashboard \
     --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
     --command='lkr' \
     --args='load-test dashboard --dashboard=1 --users=20 --run-time=10 --model=thelook' \
