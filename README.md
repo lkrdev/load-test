@@ -81,11 +81,11 @@ This is an example job to run a load test on a dashboard with 200 users for 10 m
 gcloud run jobs create lkr-help-job \
     --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
     --command='lkr' \
-    --args='load-test dashboard --dashboard=1 --users=20 --run-time=10 --model=thelook' \
+    --args='load-test dashboard --dashboard=1 --users=5 --run-time=5 --model=thelook' \
     --project=your-gcp-project-id \
     --region=your-gcp-region \ 
     --set-env-vars=LOOKERSDK_CLIENT_ID=your-client-id,LOOKERSDK_CLIENT_SECRET=your-client-secret,LOOKERSDK_BASE_URL=https://your-looker-instance.com \
-    --task-timeout=11m \
+    --task-timeout=6m \
     --max-retries=0 \
     --cpu=4 \
     --memory=8Gi \
