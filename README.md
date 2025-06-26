@@ -78,19 +78,20 @@ docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSD
 This is an example job to run a load test on a dashboard with 200 users for 10 minutes for dashboard id 1.  Note that the dashboard has [Auto Refresh](https://cloud.google.com/looker/docs/editing-user-defined-dashboards#autorefresh) enabled. If you do not have auto refresh enabled, then the user will load the dashboard and just sit there without running more queries. Cloud Run Jobs let you manage multiple concurrent jobs and scale them up and down as needed with --tasks; this is the fastest easiest way to run a large scale load test.
 
 ```
-gcloud run jobs create lkr-help-job \
-    --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
-    --command='lkr' \
-    --args='load-test dashboard --dashboard=1 --users=5 --run-time=5 --model=thelook' \
-    --project=your-gcp-project-id \
-    --region=your-gcp-region \ 
-    --set-env-vars=LOOKERSDK_CLIENT_ID=your-client-id,LOOKERSDK_CLIENT_SECRET=your-client-secret,LOOKERSDK_BASE_URL=https://your-looker-instance.com \
-    --task-timeout=6m \
+gcloud run jobs create lkr-load-test-dashboard \
+    --project=looker-load-tests \
+    --region=us-central1 \
+    --task-timeout=60 \
     --max-retries=0 \
+    --tasks=10 \
+    --execute-now \
+    --container=load-tests \
+    --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
     --cpu=4 \
     --memory=8Gi \
-    --tasks=10 \
-    --execute-now
+    --set-env-vars=LOOKERSDK_CLIENT_ID=kTk9ZH8qpkBXcHTHXmRc,LOOKERSDK_CLIENT_SECRET=8PbJb5z6YtkjDrs8SQxhrYjN,LOOKERSDK_BASE_URL=https://autozoneloadtest.cloud.looker.com \
+    --command="lkr" \
+    --args="load-test","dashboard","--dashboard=1","--users=20","--run-time=10","--model=thelook" 
 ```
 
 > Note: Escaping special characters in the command line is a pain.  You can use a custom delimited in the `--args` argument to pass the arguments as a string. E.g. using the + as a delimiter: `--args=^+^"load-test"+"dashboard"+"--dashboard=YOUR_DASHBOARD_ID"+"--users=2"+"--run-time=5"+"--model=YOUR_LOOKML_MODEL"+"--spawn-rate=.1"+"--attribute=store:random.randint(0,7000)"`
