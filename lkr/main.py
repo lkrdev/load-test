@@ -122,6 +122,14 @@ def debug(
 
 @group.command(name="dashboard")
 def load_test(
+    dashboard: str = typer.Option(
+        help="Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated",
+        default=...,
+    ),
+    model: list[str] = typer.Option(
+        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
+        default=...,
+    ),
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
     ] = 25,
@@ -133,18 +141,6 @@ def load_test(
         int,
         typer.Option(help="How many minutes to run the load test for", min=1),
     ] = 5,
-    dashboard: Annotated[
-        str | None,
-        typer.Option(
-            help="Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated"
-        ),
-    ] = None,
-    model: Annotated[
-        List[str] | None,
-        typer.Option(
-            help="Model to run the test on. Specify multiple models as --model model1 --model model2"
-        ),
-    ] = None,
     attribute: Annotated[
         List[str] | None,
         typer.Option(
@@ -164,11 +160,6 @@ def load_test(
     """
     Run a load test on a dashboard or API query
     """
-    if not (dashboard):
-        raise typer.BadParameter("Either --dashboard or --qid must be provided")
-
-    if not model:
-        raise typer.BadParameter("At least one --model must be provided")
 
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
