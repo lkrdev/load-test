@@ -89,7 +89,7 @@ gcloud run jobs create lkr-load-test-dashboard \
     --image=us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest \
     --cpu=4 \
     --memory=8Gi \
-    --set-env-vars=LOOKERSDK_CLIENT_ID=kTk9ZH8qpkBXcHTHXmRc,LOOKERSDK_CLIENT_SECRET=8PbJb5z6YtkjDrs8SQxhrYjN,LOOKERSDK_BASE_URL=https://autozoneloadtest.cloud.looker.com \
+    --set-env-vars=LOOKERSDK_CLIENT_ID=abc,LOOKERSDK_CLIENT_SECRET=123,LOOKERSDK_BASE_URL=https://yourinstance.cloud.looker.com \
     --command="lkr" \
     --args="load-test","dashboard","--dashboard=1","--users=20","--run-time=10","--model=thelook" 
 ```
