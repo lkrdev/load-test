@@ -130,6 +130,12 @@ def load_test(
         help="Model to run the test on. Specify multiple models as --model model1 --model model2",
         default=...,
     ),
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),
+    ] = [],
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
     ] = 25,
@@ -173,6 +179,7 @@ def load_test(
             self.attributes = attribute or []
             self.dashboard = dashboard
             self.models = model
+            self.group_ids = group or []
 
     env = Environment(
         user_classes=[DashboardUserClass], events=events, stop_timeout=stop_timeout
@@ -218,7 +225,13 @@ def load_test_query(
     attribute: Annotated[
         List[str],
         typer.Option(
-            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
+        ),
+    ] = [],
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
         ),
     ] = [],
     wait_time_min: Annotated[
@@ -271,6 +284,7 @@ def load_test_query(
             self.query_async = query_async
             self.async_bail_out = async_bail_out
             self.sticky_sessions = sticky_sessions
+            self.group_ids = group or []
 
     from locust import events
     from locust.env import Environment
@@ -320,6 +334,12 @@ def load_test_render(
             help="Model to run the test on. Specify multiple models as --model model1 --model model2"
         ),
     ] = None,
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),
+    ] = [],
     attribute: Annotated[
         List[str],
         typer.Option(
@@ -362,6 +382,7 @@ def load_test_render(
             self.result_format = result_format
             self.render_bail_out = render_bail_out
             self.run_once = run_once  # Pass the command-line flag value
+            self.group_ids = group or []
 
     from locust import events
     from locust.env import Environment
@@ -424,6 +445,12 @@ def load_test_embed_observability(
             help="Model to run the test on. Specify multiple models as --model model1 --model model2"
         ),
     ] = None,
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),
+    ] = [],
     completion_timeout: Annotated[
         int,
         typer.Option(
@@ -494,6 +521,7 @@ def load_test_embed_observability(
             self.log_event_prefix = log_event_prefix
             self.do_not_open_url = not open_url
             self.debug = debug
+            self.group_ids = group or []
 
     env = Environment(
         user_classes=[EmbedDashboardUserClass],

@@ -40,6 +40,7 @@ class DashboardUserObservability(User):
         self.attributes: List[str] = []
         self.dashboard: str = ""
         self.models: List[str] = []
+        self.group_ids: List[str] = []
         self.task_start_time = None
         self.completion_timeout = 120
         self.embed_domain = "http://localhost:3000"
@@ -61,6 +62,7 @@ class DashboardUserObservability(User):
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,
+                group_ids=self.group_ids or [],
                 # embed_domain=self.embed_domain,
             )
         )
