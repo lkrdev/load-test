@@ -30,6 +30,7 @@ class DashboardUser(User):
         self.sdk = None
         self.user_id = get_user_id()
         self.attributes: List[str] = []
+        self.group_ids: List[str] = []
         self.dashboard: str = ""
         self.models: List[str] = []
         chrome_options = Options()
@@ -52,6 +53,7 @@ class DashboardUser(User):
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,
+                group_ids=self.group_ids or [],
             )
         )
         if sso_url and sso_url.url:

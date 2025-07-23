@@ -39,6 +39,7 @@ class RenderUser(User):
         self.result_format: str = "pdf"
         self._task_executed: bool = False
         self.render_bail_out: int = 120
+        self.group_ids: List[str] = []
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -52,6 +53,7 @@ class RenderUser(User):
                 models=self.models,
                 user_attributes=attributes,
                 session_length=MAX_SESSION_LENGTH,
+                group_ids=self.group_ids or [],
             )
         )
         looker_user_id = extract_looker_user_id_from_token(embed_session)
