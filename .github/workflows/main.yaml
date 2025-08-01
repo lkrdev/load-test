@@ -27,10 +27,6 @@ jobs:
       - name: Set IMAGE_NAME
         run: echo "IMAGE_NAME=${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.APP_NAME }}/${{ env.SERVICE_NAME }}" >> $GITHUB_ENV
 
-      - name: Replace version in pyproject.toml
-        run: |
-          find . -name "pyproject.toml" -exec sed -i "s/^version = .*/version = \"${{ env.TAG }}\"/" {} +
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
