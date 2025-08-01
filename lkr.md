@@ -69,11 +69,12 @@ $ lkr load-test dashboard [OPTIONS]
 
 **Options**:
 
+* `--dashboard TEXT`: Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated  [required]
+* `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2  [required]
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
 * `--users INTEGER RANGE`: Number of users to run the test with  [default: 25; 1&lt;=x&lt;=1000]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
-* `--dashboard TEXT`: Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated
-* `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--stop-timeout INTEGER`: How many seconds to wait for the load test to stop  [default: 15]
 * `--help`: Show this message and exit.
@@ -93,7 +94,8 @@ $ lkr load-test query [OPTIONS]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
-* `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
+* `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
 * `--wait-time-min INTEGER RANGE`: User tasks have a random wait time between this and the max wait time  [default: 1; 1&lt;=x&lt;=100]
 * `--wait-time-max INTEGER RANGE`: User tasks have a random wait time between this and the min wait time  [default: 15; 1&lt;=x&lt;=100]
 * `--sticky-sessions / --no-sticky-sessions`: Keep the same user logged in for the duration of the test. sticky_sessions=True is currently not supported with the Looker SDKs, we are working around it in the User class.  [default: no-sticky-sessions]
@@ -116,6 +118,7 @@ $ lkr load-test render [OPTIONS]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--result-format TEXT`: Format of the rendered output (pdf, png, jpg)  [default: pdf]
 * `--render-bail-out INTEGER`: How many iterations to wait for the render task to complete (roughly number of seconds)  [default: 120]
@@ -155,6 +158,7 @@ $ lkr load-test embed-observability [OPTIONS]
 * `--min-wait INTEGER RANGE`: Minimum wait time between tasks  [default: 60; x&gt;=1]
 * `--max-wait INTEGER RANGE`: Maximum wait time between tasks  [default: 120; x&gt;=1]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
 * `--completion-timeout INTEGER RANGE`: Timeout in seconds for the dashboard run complete event  [default: 120; x&gt;=1]
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--log-event-prefix TEXT`: Prefix to add to the log event  [default: looker-embed-observability]
