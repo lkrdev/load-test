@@ -94,6 +94,7 @@ class QueryUser(User):
         self.attributes: List[str] = []
         self.async_bail_out: int = 120
         self.sticky_sessions: bool = False
+        self.group_ids: List[str] = []
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -107,6 +108,7 @@ class QueryUser(User):
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,
+                group_ids=self.group_ids,
             )
         )
         looker_user_id = extract_looker_user_id_from_token(embed_session)

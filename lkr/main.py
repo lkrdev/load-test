@@ -47,7 +47,7 @@ class LookerApiCredentials:
 
 
 @app.callback()
-def laod_env(
+def load_env(
     ctx: typer.Context,
     env_file: Annotated[
         Optional[pathlib.Path],
