@@ -9,7 +9,6 @@ env:
   REGION: us-central1
   SERVICE_NAME: cli
   APP_NAME: load-tests
-  TAG: ${{ github.sha }}
 
 jobs:
   build-and-push:
@@ -19,14 +18,14 @@ jobs:
       id-token: "write"
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set TAG
         run: echo "TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
       - name: Set IMAGE_NAME
         run: echo "IMAGE_NAME=${{ env.REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.APP_NAME }}/${{ env.SERVICE_NAME }}" >> $GITHUB_ENV
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Replace version in pyproject.toml
         run: |
