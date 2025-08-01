@@ -1,26 +1,24 @@
-import locust  # noqa
 import os
 import pathlib
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, List, Optional
 
+import gevent
+import locust  # noqa
 import looker_sdk
-from looker_sdk.sdk.api40.models import User
 import typer
 from dotenv import load_dotenv
-
-from lkr.load_test.locustfile_dashboard import DashboardUser
-from lkr.load_test.embed_dashboard_observability.main import DashboardUserObservability
-from lkr.load_test.locustfile_render import RenderUser
-from lkr.utils.validate_api import validate_api_credentials
-
-from lkr.load_test.locustfile_qid import QueryUser
 from locust import events
 from locust.env import Environment
+from looker_sdk.sdk.api40.models import User
 
-import gevent
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
+from lkr.load_test.embed_dashboard_observability.main import DashboardUserObservability
+from lkr.load_test.locustfile_dashboard import DashboardUser
+from lkr.load_test.locustfile_qid import QueryUser
+from lkr.load_test.locustfile_render import RenderUser
+from lkr.utils.validate_api import validate_api_credentials
 
 app = typer.Typer(name="lkr", no_args_is_help=True)
 group = typer.Typer(name="load-test", no_args_is_help=True)
@@ -49,7 +47,7 @@ class LookerApiCredentials:
 
 
 @app.callback()
-def main(
+def laod_env(
     ctx: typer.Context,
     env_file: Annotated[
         Optional[pathlib.Path],
@@ -74,16 +72,55 @@ def main(
         typer.Option(help="Looker API base URL"),
     ] = None,
 ):
+    if not ctx.invoked_subcommand:
+        return
     load_dotenv(dotenv_path=env_file, override=True)
+    validate_api_credentials(
+        client_id=client_id, client_secret=client_secret, base_url=base_url
+    )
+
+
+@group.callback()
+def check_settings(
+    ctx: typer.Context,
+):
+    if not ctx.invoked_subcommand:
+        return
+
     if ctx.invoked_subcommand in [
-        "load-test",
-        "load-test:query",
-        "debug",
-        "remove-embed-users",
+        "dashboard",
+        "query",
+        "render",
+        "embed-observability",
     ]:
-        validate_api_credentials(
-            client_id=client_id, client_secret=client_secret, base_url=base_url
-        )
+        sdk = looker_sdk.init40()
+        # check for embed turned on
+        setting = sdk.get_setting()
+
+        if not setting.embed_enabled:
+            typer.echo(
+                "Embed need to be enabled, please enable it in the Looker Embed settings",
+                err=True,
+            )
+            raise typer.Exit(1)
+
+        if not setting.embed_config or (
+            setting.embed_config and not setting.embed_config.sso_auth_enabled
+        ):
+            typer.echo(
+                "SSO need to be enabled, please enable it in the Looker SSO settings",
+                err=True,
+            )
+            raise typer.Exit(1)
+
+        if ctx.invoked_subcommand in ["query", "render"]:
+            # check for embed cookieless v2
+            if not setting.embed_cookieless_v2:
+                typer.echo(
+                    "Embed cookieless need to be enabled, please enable it in the Looker Embed settings",
+                    err=True,
+                )
+                raise typer.Exit(1)
 
 
 @group.command()

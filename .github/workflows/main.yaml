@@ -1,14 +1,15 @@
-name: Release Docker Image
+name: Merge to Main
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - main
 
 env:
   REGION: us-central1
   SERVICE_NAME: cli
   APP_NAME: load-tests
-  TAG: ${{ github.event.release.tag_name }}
+  TAG: ${{ github.sha::7 }}
 
 jobs:
   build-and-push:
@@ -45,8 +46,9 @@ jobs:
             --tag ${{ env.IMAGE_NAME }}:${{ env.TAG }} \
             --gcs-log-dir=gs://${{ secrets.GCP_LOGS_BUCKET_NAME }}/${{ env.APP_NAME }}
 
-      - name: Add latest tag
-        run: |
-          gcloud artifacts docker tags add ${{ env.IMAGE_NAME }}:${{ env.TAG }} \
-            ${{ env.IMAGE_NAME }}:latest \
-            --project ${{ secrets.GCP_PROJECT_ID }}
+      # not needed for this workflow, latest is on release.
+      # - name: Add latest tag
+      #   run: |
+      #     gcloud artifacts docker tags add ${{ env.IMAGE_NAME }}:${{ env.TAG }} \
+      #       ${{ env.IMAGE_NAME }}:latest \
+      #       --project ${{ secrets.GCP_PROJECT_ID }}
