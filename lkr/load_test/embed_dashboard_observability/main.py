@@ -41,6 +41,7 @@ class DashboardUserObservability(User):
         self.dashboard: str = ""
         self.models: List[str] = []
         self.group_ids: List[str] = []
+        self.external_group_id: str | None = None
         self.task_start_time = None
         self.completion_timeout = 120
         self.embed_domain = "http://localhost:3000"
@@ -57,6 +58,7 @@ class DashboardUserObservability(User):
                 first_name="Embed",
                 last_name=self.user_id,
                 external_user_id=self.user_id,
+                external_group_id=self.external_group_id,
                 session_length=MAX_SESSION_LENGTH,  # max seconds
                 target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self.dashboard}?embed_domain={self.embed_domain}",
                 permissions=PERMISSIONS,
