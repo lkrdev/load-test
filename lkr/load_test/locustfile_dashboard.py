@@ -31,6 +31,7 @@ class DashboardUser(User):
         self.user_id = get_user_id()
         self.attributes: List[str] = []
         self.group_ids: List[str] = []
+        self.external_group_id: str | None = None
         self.dashboard: str = ""
         self.models: List[str] = []
         chrome_options = Options()
@@ -48,6 +49,7 @@ class DashboardUser(User):
                 first_name="Embed",
                 last_name=self.user_id,
                 external_user_id=self.user_id,
+                external_group_id=self.external_group_id,
                 session_length=MAX_SESSION_LENGTH,  # max seconds
                 target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self.dashboard}",
                 permissions=PERMISSIONS,

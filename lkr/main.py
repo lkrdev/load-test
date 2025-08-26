@@ -18,6 +18,7 @@ from lkr.load_test.embed_dashboard_observability.main import DashboardUserObserv
 from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
+from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
 
 app = typer.Typer(name="lkr", no_args_is_help=True)
@@ -173,6 +174,18 @@ def load_test(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
         ),
     ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
     ] = 25,
@@ -217,6 +230,9 @@ def load_test(
             self.dashboard = dashboard
             self.models = model
             self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     env = Environment(
         user_classes=[DashboardUserClass], events=events, stop_timeout=stop_timeout
@@ -271,6 +287,18 @@ def load_test_query(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
         ),
     ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
     wait_time_min: Annotated[
         int,
         typer.Option(
@@ -322,6 +350,9 @@ def load_test_query(
             self.async_bail_out = async_bail_out
             self.sticky_sessions = sticky_sessions
             self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     from locust import events
     from locust.env import Environment
@@ -377,6 +408,18 @@ def load_test_render(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
         ),
     ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
     attribute: Annotated[
         List[str],
         typer.Option(
@@ -420,6 +463,9 @@ def load_test_render(
             self.render_bail_out = render_bail_out
             self.run_once = run_once  # Pass the command-line flag value
             self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     from locust import events
     from locust.env import Environment
@@ -488,6 +534,18 @@ def load_test_embed_observability(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
         ),
     ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
     completion_timeout: Annotated[
         int,
         typer.Option(
@@ -559,6 +617,9 @@ def load_test_embed_observability(
             self.do_not_open_url = not open_url
             self.debug = debug
             self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     env = Environment(
         user_classes=[EmbedDashboardUserClass],

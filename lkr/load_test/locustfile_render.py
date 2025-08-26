@@ -40,6 +40,7 @@ class RenderUser(User):
         self._task_executed: bool = False
         self.render_bail_out: int = 120
         self.group_ids: List[str] = []
+        self.external_group_id: str | None = None
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -49,6 +50,7 @@ class RenderUser(User):
                 first_name="Embed",
                 last_name=self.user_id,
                 external_user_id=self.user_id,
+                external_group_id=self.external_group_id,
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,

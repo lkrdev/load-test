@@ -95,6 +95,7 @@ class QueryUser(User):
         self.async_bail_out: int = 120
         self.sticky_sessions: bool = False
         self.group_ids: List[str] = []
+        self.external_group_id: str | None = None
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -104,6 +105,7 @@ class QueryUser(User):
                 first_name="Embed",
                 last_name=self.user_id,
                 external_user_id=self.user_id,
+                external_group_id=self.external_group_id,
                 session_length=MAX_SESSION_LENGTH,  # max seconds
                 permissions=PERMISSIONS,
                 models=self.models,
