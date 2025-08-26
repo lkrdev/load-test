@@ -18,6 +18,7 @@ from lkr.load_test.embed_dashboard_observability.main import DashboardUserObserv
 from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
+from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
 
 app = typer.Typer(name="lkr", no_args_is_help=True)
@@ -176,7 +177,7 @@ def load_test(
     external_group_id: Annotated[
         str | None,
         typer.Option(
-            help="External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder."
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
         ),
     ] = None,
     external_group_id_prefix: Annotated[
@@ -229,10 +230,9 @@ def load_test(
             self.dashboard = dashboard
             self.models = model
             self.group_ids = group or []
-            if external_group_id_prefix and external_group_id:
-                self.external_group_id = f"{external_group_id_prefix}-{external_group_id}"
-            else:
-                self.external_group_id = external_group_id
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     env = Environment(
         user_classes=[DashboardUserClass], events=events, stop_timeout=stop_timeout
@@ -290,7 +290,7 @@ def load_test_query(
     external_group_id: Annotated[
         str | None,
         typer.Option(
-            help="External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder."
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
         ),
     ] = None,
     external_group_id_prefix: Annotated[
@@ -350,10 +350,9 @@ def load_test_query(
             self.async_bail_out = async_bail_out
             self.sticky_sessions = sticky_sessions
             self.group_ids = group or []
-            if external_group_id_prefix and external_group_id:
-                self.external_group_id = f"{external_group_id_prefix}-{external_group_id}"
-            else:
-                self.external_group_id = external_group_id
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     from locust import events
     from locust.env import Environment
@@ -412,7 +411,7 @@ def load_test_render(
     external_group_id: Annotated[
         str | None,
         typer.Option(
-            help="External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder."
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
         ),
     ] = None,
     external_group_id_prefix: Annotated[
@@ -464,10 +463,9 @@ def load_test_render(
             self.render_bail_out = render_bail_out
             self.run_once = run_once  # Pass the command-line flag value
             self.group_ids = group or []
-            if external_group_id_prefix and external_group_id:
-                self.external_group_id = f"{external_group_id_prefix}-{external_group_id}"
-            else:
-                self.external_group_id = external_group_id
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     from locust import events
     from locust.env import Environment
@@ -539,7 +537,7 @@ def load_test_embed_observability(
     external_group_id: Annotated[
         str | None,
         typer.Option(
-            help="External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder."
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
         ),
     ] = None,
     external_group_id_prefix: Annotated[
@@ -619,10 +617,9 @@ def load_test_embed_observability(
             self.do_not_open_url = not open_url
             self.debug = debug
             self.group_ids = group or []
-            if external_group_id_prefix and external_group_id:
-                self.external_group_id = f"{external_group_id_prefix}-{external_group_id}"
-            else:
-                self.external_group_id = external_group_id
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
 
     env = Environment(
         user_classes=[EmbedDashboardUserClass],

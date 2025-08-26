@@ -27,6 +27,17 @@ def get_user_id() -> str:
     return "embed-" + str(random.randint(1000000000, 9999999999))
 
 
+def get_external_group_id(
+    external_group_id: str | None = None, external_group_prefix: str | None = None
+) -> str | None:
+    if not external_group_id:
+        return None
+    if external_group_prefix:
+        return f"{external_group_prefix}-{external_group_id}"
+    else:
+        return external_group_id
+
+
 def invalid_attribute_format(attr: str):
     typer.echo(f"Invalid attribute: {attr}")
 

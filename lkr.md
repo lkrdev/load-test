@@ -72,7 +72,7 @@ $ lkr load-test dashboard [OPTIONS]
 * `--dashboard TEXT`: Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated  [required]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2  [required]
 * `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
-* `--external-group-id TEXT`: External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder.
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
 * `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
 * `--users INTEGER RANGE`: Number of users to run the test with  [default: 25; 1&lt;=x&lt;=1000]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
@@ -98,7 +98,7 @@ $ lkr load-test query [OPTIONS]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
-* `--external-group-id TEXT`: External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder.
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
 * `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
 * `--wait-time-min INTEGER RANGE`: User tasks have a random wait time between this and the max wait time  [default: 1; 1&lt;=x&lt;=100]
 * `--wait-time-max INTEGER RANGE`: User tasks have a random wait time between this and the min wait time  [default: 15; 1&lt;=x&lt;=100]
@@ -123,7 +123,7 @@ $ lkr load-test render [OPTIONS]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
 * `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
-* `--external-group-id TEXT`: External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder.
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
 * `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--result-format TEXT`: Format of the rendered output (pdf, png, jpg)  [default: pdf]
@@ -165,7 +165,7 @@ $ lkr load-test embed-observability [OPTIONS]
 * `--max-wait INTEGER RANGE`: Maximum wait time between tasks  [default: 120; x&gt;=1]
 * `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
 * `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
-* `--external-group-id TEXT`: External group ID to add to the user. Useful when you have a closed system and need to test with content in a shared folder.
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
 * `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
 * `--completion-timeout INTEGER RANGE`: Timeout in seconds for the dashboard run complete event  [default: 120; x&gt;=1]
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
