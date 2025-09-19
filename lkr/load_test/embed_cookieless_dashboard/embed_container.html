@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cookieless Embed Dashboard</title>
+    <style>
+        iframe {
+            width: 100%;
+            height: 95vh;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cookieless Embed Dashboard</h1>
+    <div id="embed-container"></div>
+
+    <script>
+        if ({{debug}}) {
+            localStorage.setItem("debug", "looker:chatty:*")
+        }
+        const embedContainer = document.getElementById('embed-container');
+        let sessionReferenceToken;
+        let apiToken;
+        let navigationToken;
+        let connected = false;
+        let acquireData;
+
+        
+
+        async function acquireSession() {
+            console.log("acquireSession() called at " + new Date().toISOString());
+            const resp = await fetch('/acquire-embed-session');
+            if (!resp.ok) {
+                console.error('acquire-embed-session failed', { resp });
+                throw new Error(`acquire-embed-session failed: ${resp.status} ${resp.statusText}`);
+            }
+            return await resp.json();
+        }
+
+        async function getCookielessLoginUrl(embedUrl) {
+            console.log("getCookielessLoginUrl() called at " + new Date().toISOString());
+            acquireData = await acquireSession();
+            const { authentication_token, navigation_token, session_reference_token, api_token } = acquireData;
+            console.log("Creating iframe URL with navigation token:", navigation_token);
+            sessionReferenceToken = session_reference_token;
+            apiToken = api_token;
+            navigationToken = navigation_token;
+
+            const path = embedUrl.startsWith('/embed') ? embedUrl : `/embed${embedUrl}`;
+            const query_params = {
+                embed_domain: location.origin,
+                embed_navigation_token: navigation_token,
+            };
+            const encoded_path = encodeURIComponent(
+            path +
+                "?" +
+                Object.entries(query_params)
+                .map(([key, value]) => `${key}=${value}`)
+                .join("&")
+            );
+
+            const iframe_url = new URL(
+                `{{LOOKER_HOST}}/login/embed/${encoded_path}`
+            );
+            // iframe_url.searchParams.set(
+            //     "embed_authentication_token",
+            //     authentication_token
+            // );
+            // return iframe_url.toString()
+            return `${iframe_url.toString()}?embed_authentication_token=${authentication_token}`
+        }
+
+        function setupMessageListener() {
+            window.addEventListener('message', (event) => {
+                console.log(`Received message from iframe: ${event.data}`);
+                console.log(`Message origin: ${event.origin}`);
+                let data;
+                let message;
+                try {
+                    data = JSON.parse(event.data);
+                } catch (e) {
+                    return;
+                }
+
+                if (data.type === 'session:tokens:request') {
+                    if (connected) {
+                        console.log("already connected, skipping")
+                        // generateEmbedTokens(event.source, event.origin);
+                    } else {
+                        const iframe = document.getElementById('looker-embed')
+                        // console.log(`source: ${source}`)
+                        console.log("Sending tokens via postMessage. Navigation token:", acquireData.navigation_token);
+                        message = JSON.stringify({
+                            type: "session:tokens",
+                            api_token: acquireData.api_token,
+                            api_token_ttl: acquireData.api_token_ttl,
+                            navigation_token: acquireData.navigation_token,
+                            navigation_token_ttl: acquireData.navigation_token_ttl,
+                            session_reference_token_ttl: acquireData.session_reference_token_ttl
+                        })
+                        console.log(`sending message: ${message} from ${event.origin}`)
+                        iframe.contentWindow.postMessage(
+                            message,
+                            event.origin
+                        );
+                        connected = true;
+                    }
+                }
+            });
+        }
+
+        const generateEmbedTokens = async (source, origin) => {
+            const response = await fetch("/generate-embed-tokens", {
+                method: "POST",
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    session_reference_token: sessionReferenceToken,
+                    api_token: apiToken,
+                    navigation_token: navigationToken
+                })
+            });
+            const data = await response.json();
+            console.log("Received new tokens:", JSON.stringify(data));
+            console.log(`origin: ${origin}`)
+            const iframe = document.getElementById('looker-embed')
+            // console.log(`source: ${source}`)
+            iframe.contentWindow.postMessage(
+                JSON.stringify({
+                    type: "session:tokens",
+                    ...data,
+                }),
+                origin
+            );
+        };
+
+        async function embedDashboard() {
+            // The user needs to replace this with a valid dashboard URL
+            const dashboardId = '2';
+            const embedUrl = `/dashboards/${dashboardId}`;
+
+            try {
+                const loginUrl = await getCookielessLoginUrl(embedUrl);
+                const iframe = document.createElement('iframe');
+                iframe.id = "looker-embed"
+                iframe.src = loginUrl;
+                embedContainer.appendChild(iframe);
+                setupMessageListener();
+            } catch (error) {
+                console.error('Failed to embed dashboard:', error);
+                embedContainer.innerHTML = '<p>Failed to load embedded content. See console for details.</p>';
+            }
+        }
+
+        embedDashboard();
+    </script>
+</body>
+</html>

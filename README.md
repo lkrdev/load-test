@@ -61,7 +61,7 @@ uv run --env-file=.env lkr load-test debug looker
 uv run lkr load-test query --query=BLYyJ70e7HCeBQJrxXanHi --users=1 --run-time=5 --model=thelook --attribute "store:random.randint(1,7000)" --query-async
 
 # Run a load test on a dashboard with auto refresh
-uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute store:random.randint(1,7000) --model=thelook
+uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute "store:random.randint(1,7000)" --model=thelook
 ```
 
 ## Running in Docker
