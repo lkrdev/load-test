@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cookieless Embed Test</title>
+    <script src="https://unpkg.com/@looker/embed-sdk@2.0.6/dist/main.js"></script>
+</head>
+<body>
+    <h1>Cookieless Embed Load Test</h1>
+    <div id="embed-container" style="width: 90vw; height: 80vh;"></div>
+
+    <script>
+        const lookerHost = '{{ looker_host }}';
+        const dashboardId = '{{ dashboard_id }}';
+
+        const acquireEmbedSessionCallback = async () => {
+            const resp = await fetch(`/acquire-embed-session?dashboard_id=${dashboardId}`);
+            if (!resp.ok) {
+                console.error('acquire-embed-session failed', { resp });
+                throw new Error(`acquire-embed-session failed: ${resp.status} ${resp.statusText}`);
+            }
+            return await resp.json();
+        };
+
+        const generateEmbedTokensCallback = async ({ api_token, navigation_token }) => {
+            const resp = await fetch('/generate-embed-tokens', {
+                method: 'PUT',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ api_token, navigation_token }),
+            });
+            if (!resp.ok) {
+                console.error('generate-embed-tokens failed', { resp });
+                throw new Error(`generate-embed-tokens failed: ${resp.status} ${resp.statusText}`);
+            }
+            return await resp.json();
+        };
+
+        LookerEmbedSDK.initCookieless(
+            lookerHost,
+            acquireEmbedSessionCallback,
+            generateEmbedTokensCallback
+        );
+
+        LookerEmbedSDK.createDashboardWithId(dashboardId)
+            .appendTo('#embed-container')
+            .build()
+            .connect()
+            .then(() => console.log('Dashboard loaded'))
+            .catch((error) => console.error('Connection error', error));
+    </script>
+</body>
+</html>

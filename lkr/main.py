@@ -167,6 +167,31 @@ def debug(
 
 @group.command(name="cookieless-embed-dashboard")
 def load_test_cookieless_embed_dashboard(
+    dashboard: str = typer.Option(
+        help="Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated",
+        default=...,
+    ),
+    model: list[str] = typer.Option(
+        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
+        default=...,
+    ),
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),    ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
     ] = 25,
@@ -204,8 +229,14 @@ def load_test_cookieless_embed_dashboard(
 
     class CookielessEmbedDashboardUserClass(CookielessEmbedDashboardUser):
         def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
             self.debug = debug
+            self.dashboard = dashboard
+            self.models = model
+            self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
+            super().__init__(*args, **kwargs)
 
     env = Environment(
         user_classes=[CookielessEmbedDashboardUserClass], events=events, stop_timeout=stop_timeout

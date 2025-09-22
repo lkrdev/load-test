@@ -11,7 +11,6 @@ from lkr.load_test.utils import (
 )
 import sys
 
-
 class CookielessEmbedHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, debug=False, port=None, **kwargs):
         self.debug = debug
@@ -33,7 +32,10 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 html_content = f.read()
             
             looker_host = os.environ.get("LOOKERSDK_BASE_URL", "")
+            dashboard_id = os.environ.get("DASHBOARD_ID", "")
+            print(f"dashboard_id: {dashboard_id}")
             html_content = html_content.replace("{{LOOKER_HOST}}", looker_host)
+            html_content = html_content.replace("{{DASHBOARD_ID}}", dashboard_id)
             html_content = html_content.replace("{{debug}}", str(self.debug).lower())
 
             self.wfile.write(html_content.encode("utf-8"))
@@ -44,17 +46,26 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
             user_id = get_user_id()
+            
+            models_str = os.environ.get("MODELS", "")
+            models = models_str.split(",") if models_str else []
+            group_ids_str = os.environ.get("GROUP_IDS", "")
+            group_ids = group_ids_str.split(",") if group_ids_str else []
+            external_group_id = os.environ.get("EXTERNAL_GROUP_ID")
+
             user_session = models40.EmbedCookielessSessionAcquire(
-                first_name="Embed",
+                first_name="Cookieless Embed",
                 last_name=user_id,
                 external_user_id=user_id,
                 session_length=3600,
                 permissions=PERMISSIONS,
-                models=["basic_ecomm"],
-                # group_ids=["5"],
-                external_group_id="test_group_1",
+                models=models,
+                group_ids=group_ids,
+                external_group_id=external_group_id,
                 embed_domain=f"http://127.0.0.1:{self.port}"
             )
+
+            print(user_session)
 
             try:
                 response = self.sdk.acquire_embed_cookieless_session(
