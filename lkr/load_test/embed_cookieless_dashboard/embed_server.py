@@ -11,11 +11,12 @@ from lkr.load_test.utils import (
 )
 import sys
 
-sdk = looker_sdk.init40()
 
 class CookielessEmbedHandler(BaseHTTPRequestHandler):
-    def __init__(self, *args, debug=False, **kwargs):
+    def __init__(self, *args, debug=False, port=None, **kwargs):
         self.debug = debug
+        self.sdk = looker_sdk.init40()
+        self.port = port
         super().__init__(*args, **kwargs)
 
     def log_message(self, format, *args):
@@ -51,13 +52,14 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 permissions=PERMISSIONS,
                 models=["basic_ecomm"],
                 # group_ids=["5"],
-                external_group_id="test_group_1"
+                external_group_id="test_group_1",
+                embed_domain=f"http://127.0.0.1:{self.port}"
             )
 
             try:
-                response = sdk.acquire_embed_cookieless_session(
+                response = self.sdk.acquire_embed_cookieless_session(
                     body=user_session,
-                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
+                    transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
                 )
                 self.wfile.write(json.dumps({
                     'api_token': response.api_token,
@@ -99,9 +101,9 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                     api_token=api_token,
                     navigation_token=navigation_token
                 )
-                response = sdk.generate_tokens_for_cookieless_session(
+                response = self.sdk.generate_tokens_for_cookieless_session(
                     body=session_information,
-                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
+                    transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
                 )
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
@@ -121,7 +123,7 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
 
 def run_server(port=8080, debug=False):
     def handler(*args, **kwargs):
-        CookielessEmbedHandler(*args, debug=debug, **kwargs)
+        CookielessEmbedHandler(*args, debug=debug, port=port, **kwargs)
 
     server_address = ('' , port)
     httpd = HTTPServer(server_address, handler)
