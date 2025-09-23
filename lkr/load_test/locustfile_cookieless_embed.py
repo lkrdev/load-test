@@ -1,4 +1,5 @@
 from locust import User, between, task
+from typing import List
 import os
 import looker_sdk
 from looker_sdk import models40
@@ -11,19 +12,25 @@ from lkr.load_test.utils import (
 
 class CookielessEmbedUser(User):
     abstract = True
-    wait_time = between(1, 2)
+    wait_time = between(1000, 2000)
     host = os.environ.get("LOOKERSDK_BASE_URL")
+    abstract = True  # This is a base class
+    cleanup_user: bool = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.dashboard = "1"
         self.sdk = looker_sdk.init40()
         self.session = None
         self.user_id = get_user_id()
+        self.attributes: List[str] = []
+        self.group_ids: List[str] = []
+        self.external_group_id: str | None = None
+        self.models: List[str] = []
+
 
 
     def on_start(self):
-        # attributes = format_attributes(["locale:en_US"])
+        attributes = format_attributes(self.attributes)
         
         acquireSession = models40.EmbedCookielessSessionAcquire(
             first_name="Cookieless Embed",
@@ -32,10 +39,9 @@ class CookielessEmbedUser(User):
             session_length=MAX_SESSION_LENGTH,
             permissions=PERMISSIONS,
             models=["basic_ecomm"],
-            # user_attributes=attributes,
-            # group_ids=["5"],
-            external_group_id="test_group_1"
-            # embed_domain
+            user_attributes=attributes,
+            group_ids=self.group_ids or [],
+            external_group_id=self.external_group_id,
             # session_reference_token
         )
 

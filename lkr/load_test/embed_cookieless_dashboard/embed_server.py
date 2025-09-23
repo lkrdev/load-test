@@ -32,8 +32,7 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 html_content = f.read()
             
             looker_host = os.environ.get("LOOKERSDK_BASE_URL", "")
-            dashboard_id = os.environ.get("DASHBOARD_ID", "")
-            print(f"dashboard_id: {dashboard_id}")
+            dashboard_id = os.environ.get("DASHBOARD_ID", "1")
             html_content = html_content.replace("{{LOOKER_HOST}}", looker_host)
             html_content = html_content.replace("{{DASHBOARD_ID}}", dashboard_id)
             html_content = html_content.replace("{{debug}}", str(self.debug).lower())
@@ -47,7 +46,7 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
 
             user_id = get_user_id()
             
-            models_str = os.environ.get("MODELS", "")
+            models_str = os.environ.get("MODELS", "basic_ecomm")
             models = models_str.split(",") if models_str else []
             group_ids_str = os.environ.get("GROUP_IDS", "")
             group_ids = group_ids_str.split(",") if group_ids_str else []
@@ -65,12 +64,11 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 embed_domain=f"http://127.0.0.1:{self.port}"
             )
 
-            print(user_session)
-
             try:
                 response = self.sdk.acquire_embed_cookieless_session(
                     body=user_session,
-                    transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
+                    # transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
+                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
                 )
                 self.wfile.write(json.dumps({
                     'api_token': response.api_token,
@@ -114,14 +112,19 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 )
                 response = self.sdk.generate_tokens_for_cookieless_session(
                     body=session_information,
-                    transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
+                    # transport_options={'headers':{'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}}
+                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
                 )
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({
                     'api_token': response.api_token,
+                    'api_token_ttl': response.api_token_ttl,
                     'navigation_token': response.navigation_token,
+                    'navigation_token_ttl': response.navigation_token_ttl,
+                    'session_reference_token': response.session_reference_token,
+                    'session_reference_token_ttl': response.session_reference_token_ttl,
                 }).encode('utf-8'))
             except Exception as e:
                 print(e)

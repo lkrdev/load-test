@@ -28,8 +28,6 @@
         let connected = false;
         let acquireData;
 
-        
-
         async function acquireSession() {
             console.log("acquireSession() called at " + new Date().toISOString());
             const resp = await fetch('/acquire-embed-session');
@@ -75,7 +73,7 @@
 
         function setupMessageListener() {
             window.addEventListener('message', (event) => {
-                console.log(`Received message from iframe: ${event.data}`);
+                console.log(`Received message from iframe: ${JSON.stringify(event.data)}`);
                 console.log(`Message origin: ${event.origin}`);
                 let data;
                 let message;
@@ -123,15 +121,19 @@
                     navigation_token: navigationToken
                 })
             });
-            const data = await response.json();
-            console.log("Received new tokens:", JSON.stringify(data));
+            const embedTokenData = await response.json();
+            console.log("Received new tokens:", JSON.stringify(embedTokenData));
             console.log(`origin: ${origin}`)
             const iframe = document.getElementById('looker-embed')
             // console.log(`source: ${source}`)
             iframe.contentWindow.postMessage(
                 JSON.stringify({
                     type: "session:tokens",
-                    ...data,
+                    api_token: embedTokenData.api_token,
+                    api_token_ttl: embedTokenData.api_token_ttl,
+                    navigation_token: embedTokenData.navigation_token,
+                    navigation_token_ttl: embedTokenData.navigation_token_ttl,
+                    session_reference_token_ttl: embedTokenData.session_reference_token_ttl
                 }),
                 origin
             );

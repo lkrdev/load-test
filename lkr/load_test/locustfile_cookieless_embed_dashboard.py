@@ -69,7 +69,8 @@ class CookielessEmbedDashboardUser(User):
                 "profile.cookie_controls_mode": 1, # 1 = Block third-party cookies
             },
         )
-        chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+        if self.debug:
+            chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
         self.driver = webdriver.Chrome(options=chrome_options)
 
     def on_start(self):
@@ -84,7 +85,7 @@ class CookielessEmbedDashboardUser(User):
         except Exception as e:
             print(f"Error waiting for iframe or handshake: {e}")
         finally:
-            print("Printing browser logs:")
+            # print("Printing browser logs:")
             for entry in self.driver.get_log('browser'):
                 print(entry)
     
