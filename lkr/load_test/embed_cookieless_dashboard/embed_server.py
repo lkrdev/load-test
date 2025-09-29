@@ -8,6 +8,7 @@ from lkr.load_test.utils import (
     MAX_SESSION_LENGTH,
     PERMISSIONS,
     get_user_id,
+    format_attributes,
 )
 import sys
 
@@ -52,6 +53,10 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
             group_ids = group_ids_str.split(",") if group_ids_str else []
             external_group_id = os.environ.get("EXTERNAL_GROUP_ID")
 
+            attributes_str = os.environ.get("ATTRIBUTES", "[]")
+            attributes_list = json.loads(attributes_str)
+            user_attributes = format_attributes(attributes_list)
+
             user_session = models40.EmbedCookielessSessionAcquire(
                 first_name="Cookieless Embed",
                 last_name=user_id,
@@ -61,6 +66,7 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 models=models,
                 group_ids=group_ids,
                 external_group_id=external_group_id,
+                user_attributes=user_attributes,
                 embed_domain=f"http://127.0.0.1:{self.port}"
             )
 

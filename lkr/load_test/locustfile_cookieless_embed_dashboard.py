@@ -4,6 +4,7 @@ import socket
 import subprocess
 import sys
 import time
+import json
 from typing import List
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -32,6 +33,7 @@ class CookielessEmbedDashboardUser(User):
         self.external_group_id: str | None = getattr(self, 'external_group_id', None)
         self.dashboard: str = getattr(self, 'dashboard', "")
         self.models: List[str] = getattr(self, 'models', [])
+        self.attributes: List[str] = getattr(self, 'attributes', [])
 
         server_path = os.path.join(
             os.path.dirname(__file__),
@@ -47,12 +49,28 @@ class CookielessEmbedDashboardUser(User):
         lEnv["DASHBOARD_ID"] = self.dashboard
         lEnv["MODELS"] = ",".join(self.models)
         lEnv["GROUP_IDS"] = ",".join(self.group_ids)
+        lEnv["ATTRIBUTES"] = json.dumps(self.attributes)
         if self.external_group_id:
             lEnv["EXTERNAL_GROUP_ID"] = self.external_group_id
 
         self.server_process = subprocess.Popen(
             server_cmd, env=lEnv
         )
+
+        # Wait for the server to be ready
+        is_server_ready = False
+        for _ in range(20):  # 10 seconds timeout
+            try:
+                with socket.create_connection(("127.0.0.1", self.port), timeout=0.5):
+                    is_server_ready = True
+                    break
+            except (socket.timeout, ConnectionRefusedError):
+                time.sleep(0.5)
+
+        if not is_server_ready:
+            self.server_process.terminate()
+            self.server_process.wait()
+            raise Exception("Embed server failed to start")
 
         chrome_options = Options()
         chrome_options.add_argument("--headless=new")

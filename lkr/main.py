@@ -175,6 +175,12 @@ def load_test_cookieless_embed_dashboard(
         help="Model to run the test on. Specify multiple models as --model model1 --model model2",
         default=...,
     ),
+    attribute: Annotated[
+        List[str] | None,
+        typer.Option(
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
+        ),
+    ] = None,
     group: Annotated[
         List[str],
         typer.Option(
@@ -232,6 +238,7 @@ def load_test_cookieless_embed_dashboard(
             self.debug = debug
             self.dashboard = dashboard
             self.models = model
+            self.attributes = attribute or []
             self.group_ids = group or []
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
