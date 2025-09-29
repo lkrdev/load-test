@@ -21,7 +21,4 @@ lkr.egg-info
 Dockerfile
 Makefile
 .python-version
-.env.example
-screenshot.png
-context/
 .env
