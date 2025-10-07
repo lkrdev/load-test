@@ -18,6 +18,8 @@ from lkr.load_test.embed_dashboard_observability.main import DashboardUserObserv
 from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
+from lkr.load_test.locustfile_cookieless_embed import CookielessEmbedUser
+from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
 from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
 
@@ -27,6 +29,7 @@ app.add_typer(group, name="load-test")
 
 state = {"client_id": False}
 
+
 LOAD_TEST_PATH = pathlib.Path("lkr", "load_test")
 
 
@@ -34,6 +37,8 @@ class LoadTestType(str, Enum):
     dashboard = "dashboard"
     query = "query"
     render = "render"
+    cookieless_embed = "cookieless-embed"
+    cookieless_embed_dashboard = "cookieless-embed-dashboard"
 
 
 class DebugType(str, Enum):
@@ -93,6 +98,8 @@ def check_settings(
         "query",
         "render",
         "embed-observability",
+        "cookieless-embed",
+        "cookieless-embed-dashboard",
     ]:
         sdk = looker_sdk.init40()
         # check for embed turned on
@@ -114,7 +121,7 @@ def check_settings(
             )
             raise typer.Exit(1)
 
-        if ctx.invoked_subcommand in ["query", "render"]:
+        if ctx.invoked_subcommand in ["query", "render", "cookieless-embed", "cookieless-embed-dashboard"]:
             # check for embed cookieless v2
             if not setting.embed_cookieless_v2:
                 typer.echo(
@@ -158,8 +165,8 @@ def debug(
             typer.echo(f"Error logging in to Looker: {str(e)}")
 
 
-@group.command(name="dashboard")
-def load_test(
+@group.command(name="cookieless-embed-dashboard")
+def load_test_cookieless_embed_dashboard(
     dashboard: str = typer.Option(
         help="Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated",
         default=...,
@@ -168,12 +175,17 @@ def load_test(
         help="Model to run the test on. Specify multiple models as --model model1 --model model2",
         default=...,
     ),
+    attribute: Annotated[
+        List[str] | None,
+        typer.Option(
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
+        ),
+    ] = None,
     group: Annotated[
         List[str],
         typer.Option(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
-        ),
-    ] = [],
+        ),    ] = [],
     external_group_id: Annotated[
         str | None,
         typer.Option(
@@ -194,8 +206,98 @@ def load_test(
         typer.Option(help="Number of users to spawn per second", min=0, max=100),
     ] = 1,
     run_time: Annotated[
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
+    ] = 5,
+    stop_timeout: Annotated[
         int,
-        typer.Option(help="How many minutes to run the load test for", min=1),
+        typer.Option(
+            help="How many seconds to wait for the load test to stop",
+        ),
+    ] = 15,
+    debug: Annotated[
+        bool,
+        typer.Option(
+            "--debug",
+            help="Enable debug mode",
+        ),
+    ] = False,
+):
+    from locust import events
+    from locust.env import Environment
+
+    """
+    Run a load test on a dashboard or API query
+    """
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+
+    class CookielessEmbedDashboardUserClass(CookielessEmbedDashboardUser):
+        def __init__(self, *args, **kwargs):
+            self.debug = debug
+            self.dashboard = dashboard
+            self.models = model
+            self.attributes = attribute or []
+            self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
+            super().__init__(*args, **kwargs)
+
+    env = Environment(
+        user_classes=[CookielessEmbedDashboardUserClass], events=events, stop_timeout=stop_timeout
+    )
+    runner = env.create_local_runner()
+
+    runner.start(user_count=users, spawn_rate=spawn_rate)
+
+    def quit_runner():
+        runner.stop()
+        if runner.greenlet:
+            runner.greenlet.kill(block=False)
+        typer.Exit(1)
+
+    if runner.spawning_greenlet:
+        runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
+    runner.greenlet.join()
+
+@group.command(name="dashboard")
+def load_test(
+    dashboard: str = typer.Option(
+        help="Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated",
+        default=...,
+    ),
+    model: list[str] = typer.Option(
+        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
+        default=...,
+    ),
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),    ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
+    users: Annotated[
+        int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
+    ] = 25,
+    spawn_rate: Annotated[
+        float,
+        typer.Option(help="Number of users to spawn per second", min=0, max=100),
+    ] = 1,
+    run_time: Annotated[
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
     ] = 5,
     attribute: Annotated[
         List[str] | None,
@@ -266,8 +368,7 @@ def load_test_query(
         typer.Option(help="Number of users to spawn per second", min=0, max=100),
     ] = 1,
     run_time: Annotated[
-        int,
-        typer.Option(help="How many minutes to run the load test for", min=1),
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
     ] = 5,
     model: Annotated[
         List[str] | None,
@@ -279,14 +380,12 @@ def load_test_query(
         List[str],
         typer.Option(
             help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
-        ),
-    ] = [],
+        ),    ] = [],
     group: Annotated[
         List[str],
         typer.Option(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
-        ),
-    ] = [],
+        ),    ] = [],
     external_group_id: Annotated[
         str | None,
         typer.Option(
@@ -393,8 +492,7 @@ def load_test_render(
         typer.Option(help="Number of users to spawn per second", min=0, max=100),
     ] = 1,
     run_time: Annotated[
-        int,
-        typer.Option(help="How many minutes to run the load test for", min=1),
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
     ] = 5,
     model: Annotated[
         List[str] | None,
@@ -406,8 +504,7 @@ def load_test_render(
         List[str],
         typer.Option(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
-        ),
-    ] = [],
+        ),    ] = [],
     external_group_id: Annotated[
         str | None,
         typer.Option(
@@ -424,8 +521,7 @@ def load_test_render(
         List[str],
         typer.Option(
             help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
-        ),
-    ] = [],
+        ),    ] = [],
     result_format: Annotated[
         str,
         typer.Option(
@@ -505,8 +601,7 @@ def load_test_embed_observability(
         typer.Option(help="Number of users to spawn per second", min=0, max=100),
     ] = 1,
     run_time: Annotated[
-        int,
-        typer.Option(help="How many minutes to run the load test for", min=1),
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
     ] = 5,
     port: Annotated[
         int,
@@ -514,14 +609,8 @@ def load_test_embed_observability(
             help="Port to run the embed server on",
         ),
     ] = 4000,
-    min_wait: Annotated[
-        int,
-        typer.Option(help="Minimum wait time between tasks", min=1),
-    ] = 60,
-    max_wait: Annotated[
-        int,
-        typer.Option(help="Maximum wait time between tasks", min=1),
-    ] = 120,
+    min_wait: Annotated[int, typer.Option(help="Minimum wait time between tasks", min=1)] = 60,
+    max_wait: Annotated[int, typer.Option(help="Maximum wait time between tasks", min=1)] = 120,
     model: Annotated[
         List[str] | None,
         typer.Option(
@@ -532,8 +621,7 @@ def load_test_embed_observability(
         List[str],
         typer.Option(
             help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
-        ),
-    ] = [],
+        ),    ] = [],
     external_group_id: Annotated[
         str | None,
         typer.Option(
@@ -556,8 +644,7 @@ def load_test_embed_observability(
         List[str],
         typer.Option(
             help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
-        ),
-    ] = [],
+        ),    ] = [],
     log_event_prefix: Annotated[
         str,
         typer.Option(
@@ -579,7 +666,6 @@ def load_test_embed_observability(
     ] = False,
 ):
     """
-    \b
     Open dashboards with observability metrics. The metrics are collected through Looker's JavaScript events and logged with the specified prefix. This command will:
     1. Start an embed server to host the dashboard iframe
     2. Spawn multiple users that will:
@@ -735,7 +821,6 @@ def delete_embed_users(
                     )
                 except Exception as e:
                     typer.echo(f"Error deleting user: {str(e)}")
-
 
 if __name__ == "__main__":
     app()

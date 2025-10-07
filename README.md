@@ -8,6 +8,7 @@ A command-line tool for load testing Looker dashboards, queries, rendered dashbo
 - `lkr load-test render`: Run a load test on a rendered dashboard.
 - `lkr load-test embed-observability`: Open dashboards with observability metrics in an embedded context.
 - `lkr load-test delete-embed-users`: Delete all embed users that were created by this tool. Identifiable by their first name "Embed".
+- `lkr load-test cookieless-embed-dashboard`: Run a load test on a cookieless dashboard.
 
 ## How it works
 The command line tool is a wrapper around the Looker SDK. It uses the Looker SDK to create concurrent **embed** users to run queries, dashboards, and schedules as unique users.
@@ -61,7 +62,7 @@ uv run --env-file=.env lkr load-test debug looker
 uv run lkr load-test query --query=BLYyJ70e7HCeBQJrxXanHi --users=1 --run-time=5 --model=thelook --attribute "store:random.randint(1,7000)" --query-async
 
 # Run a load test on a dashboard with auto refresh
-uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute store:random.randint(1,7000) --model=thelook
+uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute "store:random.randint(1,7000)" --model=thelook
 ```
 
 ## Running in Docker
