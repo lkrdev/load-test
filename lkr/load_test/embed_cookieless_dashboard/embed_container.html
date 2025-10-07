@@ -42,7 +42,7 @@
             console.log("getCookielessLoginUrl() called at " + new Date().toISOString());
             acquireData = await acquireSession();
             const { authentication_token, navigation_token, session_reference_token, api_token } = acquireData;
-            console.log("Creating iframe URL with navigation token:", navigation_token);
+            console.log("Creating iframe URL with authentication token:", authentication_token);
             sessionReferenceToken = session_reference_token;
             apiToken = api_token;
             navigationToken = navigation_token;
@@ -63,18 +63,12 @@
             const iframe_url = new URL(
                 `{{LOOKER_HOST}}/login/embed/${encoded_path}`
             );
-            // iframe_url.searchParams.set(
-            //     "embed_authentication_token",
-            //     authentication_token
-            // );
-            // return iframe_url.toString()
             return `${iframe_url.toString()}?embed_authentication_token=${authentication_token}`
         }
 
         function setupMessageListener() {
             window.addEventListener('message', (event) => {
-                console.log(`Received message from iframe: ${JSON.stringify(event.data)}`);
-                console.log(`Message origin: ${event.origin}`);
+                console.log(`Received message from iframe with data: ${JSON.stringify(event.data)}`);
                 let data;
                 let message;
                 try {
@@ -88,8 +82,6 @@
                         generateEmbedTokens(event.source, event.origin);
                     } else {
                         const iframe = document.getElementById('looker-embed')
-                        // console.log(`source: ${source}`)
-                        console.log("Sending tokens via postMessage. Navigation token:", acquireData.navigation_token);
                         message = JSON.stringify({
                             type: "session:tokens",
                             api_token: acquireData.api_token,
@@ -123,9 +115,7 @@
             });
             const embedTokenData = await response.json();
             console.log("Received new tokens:", JSON.stringify(embedTokenData));
-            console.log(`origin: ${origin}`)
             const iframe = document.getElementById('looker-embed')
-            // console.log(`source: ${source}`)
             iframe.contentWindow.postMessage(
                 JSON.stringify({
                     type: "session:tokens",
@@ -140,11 +130,8 @@
         };
 
         async function embedDashboard() {
-            // The user needs to replace this with a valid dashboard URL
             const dashboardId = '{{DASHBOARD_ID}}';
             const embedUrl = `/dashboards/${dashboardId}`;
-
-            console.log(`embedded url: ${embedUrl}`);
 
             try {
                 const loginUrl = await getCookielessLoginUrl(embedUrl);

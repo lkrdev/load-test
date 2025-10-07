@@ -262,92 +262,6 @@ def load_test_cookieless_embed_dashboard(
         runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
     runner.greenlet.join()
 
-@group.command(name="cookieless-embed")
-def load_test_cookieless_embed(
-    model: list[str] = typer.Option(
-        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
-        default=...,
-    ),
-    attribute: Annotated[
-        List[str] | None,
-        typer.Option(
-            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
-        ),
-    ] = None,
-    group: Annotated[
-        List[str],
-        typer.Option(
-            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
-        ),
-    ] = [],
-    external_group_id: Annotated[
-        str | None,
-        typer.Option(
-            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
-        ),
-    ] = None,
-    external_group_id_prefix: Annotated[
-        str | None,
-        typer.Option(
-            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
-        ),
-    ] = "embed",
-    users: Annotated[
-        int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
-    ] = 25,
-    spawn_rate: Annotated[
-        float,
-        typer.Option(help="Number of users to spawn per second", min=0, max=100),
-    ] = 1,
-    run_time: Annotated[
-        int, typer.Option(help="How many minutes to run the load test for", min=1)
-    ] = 5,
-    stop_timeout: Annotated[
-        int,
-        typer.Option(
-            help="How many seconds to wait for the load test to stop",
-        ),
-    ] = 15,
-):
-    from locust import events
-    from locust.env import Environment
-
-    """
-    Run a load test on a dashboard or API query
-    """
-
-    typer.echo(
-        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
-    )
-
-    class CookielessEmbedUserClass(CookielessEmbedUser):
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.models = model
-            self.attributes = attribute or []
-            self.group_ids = group or []
-            self.external_group_id = get_external_group_id(
-                external_group_id, external_group_id_prefix
-            )
-
-    env = Environment(
-        user_classes=[CookielessEmbedUserClass], events=events, stop_timeout=stop_timeout
-    )
-    runner = env.create_local_runner()
-
-    runner.start(user_count=users, spawn_rate=spawn_rate)
-
-    def quit_runner():
-        runner.stop()
-        if runner.greenlet:
-            runner.greenlet.kill(block=False)
-        typer.Exit(1)
-
-    if runner.spawning_greenlet:
-        runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
-    runner.greenlet.join()
-
-
 @group.command(name="dashboard")
 def load_test(
     dashboard: str = typer.Option(
@@ -907,25 +821,6 @@ def delete_embed_users(
                     )
                 except Exception as e:
                     typer.echo(f"Error deleting user: {str(e)}")
-
-
-@group.command(name="run-server")
-def run_server(
-    port: Annotated[
-        int,
-        typer.Option(
-            help="Port to run the embed server on",
-        ),
-    ] = 8080,
-):
-    """
-    Run the cookieless embed dashboard server.
-    """
-    from lkr.load_test.embed_cookieless_dashboard.embed_server import run_server
-
-    typer.echo(f"Starting server on port {port}")
-    run_server(port)
-
 
 if __name__ == "__main__":
     app()

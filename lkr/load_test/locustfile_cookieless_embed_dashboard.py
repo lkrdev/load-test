@@ -57,9 +57,9 @@ class CookielessEmbedDashboardUser(User):
             server_cmd, env=lEnv
         )
 
-        # Wait for the server to be ready
+        # Wait for the server to be ready with 10 second timeout
         is_server_ready = False
-        for _ in range(20):  # 10 seconds timeout
+        for _ in range(20): 
             try:
                 with socket.create_connection(("127.0.0.1", self.port), timeout=0.5):
                     is_server_ready = True
@@ -94,16 +94,15 @@ class CookielessEmbedDashboardUser(User):
     def on_start(self):
         self.driver.get(self.host)
         try:
-            # print("Waiting up to 3 seconds for embed iframe to be present...")
-            WebDriverWait(self.driver, 3).until(
+            # Waiting up to 2 seconds for embed iframe to be present...")
+            WebDriverWait(self.driver, 2).until(
                 EC.presence_of_element_located((By.ID, "looker-embed"))
             )
-            print("Embed iframe is present. Waiting 3 seconds for handshake to complete...")
-            time.sleep(3)
+            print("Embed iframe is present. Waiting 2 seconds for handshake to complete...")
+            time.sleep(2)
         except Exception as e:
             print(f"Error waiting for iframe or handshake: {e}")
         finally:
-            # print("Printing browser logs:")
             for entry in self.driver.get_log('browser'):
                 print(entry)
     
