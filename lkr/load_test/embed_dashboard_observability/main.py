@@ -99,7 +99,7 @@ class DashboardUserObservability(User):
             "Authorization": f"Bearer {embed_user_token}",
             "Content-Type": "application/json"
         }
-        print(embed_user_token, headers, payload,f"{os.environ.get('LOOKERSDK_BASE_URL')}/api/4.0/embed/token_url/me")
+        
         try:
             embed_url_as_me = requests.post(f"{os.environ.get('LOOKERSDK_BASE_URL')}/api/4.0/embed/token_url/me", json=payload, headers=headers)
             print(embed_url_as_me)
