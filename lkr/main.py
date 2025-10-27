@@ -18,7 +18,7 @@ from lkr.load_test.embed_dashboard_observability.main import DashboardUserObserv
 from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
-from lkr.load_test.locustfile_cookieless_embed import CookielessEmbedUser
+# from lkr.load_test.locustfile_cookieless_embed import CookielessEmbedUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
 from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
@@ -590,7 +590,7 @@ def load_test_embed_observability(
     dashboard: Annotated[
         str,
         typer.Option(
-            help="Dashboard ID to render",
+            help="Dashboard ID to render. Alternatively, provide a comma seperated list of dashboard ID's and we'll simulate navigating between dashboard tabs all within the iFrame and observe performance.",
         ),
     ],
     users: Annotated[
@@ -664,6 +664,20 @@ def load_test_embed_observability(
             help="Enable debug mode",
         ),
     ] = False,
+    embed_as_me: Annotated[
+        bool | None,
+        typer.Option(
+            help="""An optional flag to generate the url as an existing embed user. This means no user sensitive info is encoded in the url. 
+            If selected the '--embed_user_id' flag is also required to login as a specific embed user.
+            """
+        )  
+    ] = False,
+    embed_user_id: Annotated[
+        str | None,
+        typer.Option(
+            help="An optional Embed User to generate the url for. Only used if '--embed_as_me' flag is selected"
+        )
+    ] = ""
 ):
     """
     Open dashboards with observability metrics. The metrics are collected through Looker's JavaScript events and logged with the specified prefix. This command will:
@@ -680,6 +694,7 @@ def load_test_embed_observability(
     3. Will also track start and end times for the whole process (looker_embed_task_start and looker_embed_task_complete)
     4. Log all events with timing information to help analyze performance in a JSON format.  Events begin with <log_event_prefix>:*
     5. Automatically stop after the specified run time
+    6. Optionally, if multiple are ID's are provided to dashboard then we'll monitor performance of tabbing between each report.
 
     \f
     """
@@ -706,6 +721,8 @@ def load_test_embed_observability(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.embed_as_me = embed_as_me or False
+            self.embed_user_id = embed_user_id or ""
 
     env = Environment(
         user_classes=[EmbedDashboardUserClass],

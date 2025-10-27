@@ -33,7 +33,8 @@
         const iframeUrl = url.searchParams.get('iframe_url');
         const looker_url =  new URL(iframeUrl);
         const origin = looker_url.origin;
-        const dashboard = url.searchParams.get('dashboard_id');
+        const dashboard_ids = url.searchParams.get('dashboard_id').split(",");
+        const dashboard = dashboard_ids[0];
         const user_id = url.searchParams.get('user_id');
         const task_id = url.searchParams.get('task_id');
         const task_start_time = url.searchParams.get('task_start_time');
@@ -48,8 +49,9 @@
 
         // Track which events we've received
         
-        const trackedEvents = new Set(['dashboard:loaded', 'dashboard:run:complete', 'dashboard:tile:complete', 'dashboard:run:start', 'dashboard:tile:start']);
-
+        const trackedEvents = new Set(['page:changed','dashboard:load','dashboard:loaded', 'dashboard:run:complete', 'dashboard:tile:complete', 'dashboard:run:start', 'dashboard:tile:start']);
+        let currentDashboardIndex = 0;
+        let forward = true;
         // Listen for Looker embed events
         window.addEventListener('message', function(event) {
             if (debug) {
@@ -87,9 +89,35 @@
 
                 // Track received events
                 if (type === 'dashboard:run:complete') {
-                    complete = document.createElement("div");
-                    complete.id = "completion-indicator";
-                    document.body.appendChild(complete);
+                    if (dashboard_ids.length > 1) {
+                        if (forward) {
+                            if (currentDashboardIndex < dashboard_ids.length - 1) {
+                                currentDashboardIndex++;
+                            } else {
+                                forward = false;
+                                currentDashboardIndex--;
+                            }
+                        } else {
+                            if (currentDashboardIndex > 0) {
+                                currentDashboardIndex--;
+                            } else {
+                                complete = document.createElement("div");
+                                complete.id = "completion-indicator";
+                                document.body.appendChild(complete);
+                                return;
+                            }
+                        }
+                        const nextDashboardId = dashboard_ids[currentDashboardIndex];
+                        const iframe = document.getElementById('looker-iframe');
+                        iframe.contentWindow.postMessage(JSON.stringify({
+                            type: 'dashboard:load',
+                            id: nextDashboardId
+                        }), origin);
+                    } else {
+                        complete = document.createElement("div");
+                        complete.id = "completion-indicator";
+                        document.body.appendChild(complete);
+                    }
                 }
             }
         });
