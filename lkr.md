@@ -144,6 +144,7 @@ Open dashboards with observability metrics. The metrics are collected through Lo
      - dashboard:run:complete - Query completion time
      - dashboard:tile:start - Individual tile start time
      - dashboard:tile:complete - Individual tile completion time
+     - page:changed - Dashboard page change completion time
 3. Will also track start and end times for the whole process (looker_embed_task_start and looker_embed_task_complete)
 4. Log all events with timing information to help analyze performance in a JSON format.  Events begin with &lt;log_event_prefix&gt;:*
 5. Automatically stop after the specified run time
@@ -156,7 +157,7 @@ $ lkr load-test embed-observability [OPTIONS]
 
 **Options**:
 
-* `--dashboard TEXT`: Dashboard ID to render  [required]
+* `--dashboard TEXT`: Dashboard ID to render. Alternatively provide a comma seperated list of ID's to cycle through load times for.  [required]
 * `--users INTEGER RANGE`: Number of users to run the test with  [default: 5; 1&lt;=x&lt;=1000]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
@@ -173,6 +174,8 @@ $ lkr load-test embed-observability [OPTIONS]
 * `--open-url / --no-open-url`: Do not open the URL in the observability browser, useful for viewing a user&#x27;s embed dashboard when running locally  [default: open-url]
 * `--debug`: Enable debug mode
 * `--help`: Show this message and exit.
+* `--embed-as-me BOOLEAN`: If true, the embed url will be generated as the target user [default: False]
+* `--embed-user-id TEXT`: If `--embed-as-me` is set to True SSO url will be generated as this user.
 
 ### `lkr load-test delete-embed-users`
 

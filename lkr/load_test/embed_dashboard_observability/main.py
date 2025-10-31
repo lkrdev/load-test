@@ -1,12 +1,12 @@
 import os
 import urllib.parse
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
-
+import requests
 import looker_sdk
 import structlog
 from locust import User, between, task  # noqa
-from looker_sdk import models40
+from looker_sdk import models40, error
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
@@ -48,6 +48,11 @@ class DashboardUserObservability(User):
         self.log_event_prefix = "looker-embed-observability"
         self.do_not_open_url = False
         self.debug: bool = False
+        self.embed_as_me: bool = False
+        self.embed_user_id: str = ""
+    
+    def _return_dashboard(self):
+        return self.dashboard.split(',')[0]
 
     def get_sso_url(self):
         attributes = format_attributes(self.attributes)
@@ -60,7 +65,7 @@ class DashboardUserObservability(User):
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,
                 session_length=MAX_SESSION_LENGTH,  # max seconds
-                target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self.dashboard}?embed_domain={self.embed_domain}",
+                target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self._return_dashboard()}?embed_domain={self.embed_domain}",
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,
@@ -69,6 +74,38 @@ class DashboardUserObservability(User):
             )
         )
         return sso_url
+    
+    ### create_embed_url_as_me
+    # logs in as an existing embed user (assumes they have already been created) and generates embed session
+    # doesn't include sensitive info in url, in Looker Core can only work for embed user and Looker Credentials need to be from API SA
+    ###
+    def get_embed_url_as_me(self):
+        if not self.sdk:
+            raise ValueError("SDK not initialized")
+        embed_user_token = self.sdk.login_user(user_id=self.embed_user_id).access_token
+        
+        target_url = (
+            f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self._return_dashboard()}"
+            f"?embed_domain={self.embed_domain}"
+        )
+        
+        payload = {
+            "target_url": target_url,
+            "session_length": MAX_SESSION_LENGTH,
+            "force_logout_login": False,
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {embed_user_token}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            embed_url_as_me = requests.post(f"{os.environ.get('LOOKERSDK_BASE_URL')}/api/4.0/embed/token_url/me", json=payload, headers=headers)
+            print(embed_url_as_me)
+            return embed_url_as_me.json()
+        except error.SDKError as e:
+            print(e.message)
 
     def on_start(self):
         # Initialize the SDK - make sure to set your environment variables
@@ -86,7 +123,7 @@ class DashboardUserObservability(User):
         task_id = str(uuid4())
         self.event_logger = EventLogger.initialize(
             user_id=self.user_id,
-            dashboard=self.dashboard,
+            dashboard=self._return_dashboard(),
             task_id=task_id,
             log_event_prefix=self.log_event_prefix,
         )
@@ -115,21 +152,38 @@ class DashboardUserObservability(User):
 
         self.event_logger.log_event("user_task_chromium_driver_loaded")
 
-        sso_url = self.get_sso_url()
+        if self.embed_as_me:
+            sso_url = self.get_embed_url_as_me()
+            print(sso_url)
 
-        self.event_logger.log_event("user_task_sso_url_generated")
-        quoted_url = urllib.parse.quote(str(sso_url.url), safe="")
-        # Open the local embed container with the SSO URL as a parameter
-        embed_url_params = {
-            "dashboard_id": self.dashboard,
-            "user_id": self.user_id,
-            "task_id": task_id,
-            "task_start_time": self.task_start_time.isoformat(),
-        }
-        if self.debug:
-            embed_url_params["debug"] = "true"
+            self.event_logger.log_event("user_task_embed_url_as_me_generated")
+            # Open the local embed container with the SSO URL as a parameter
+            embed_url_params = {
+                "dashboard_id": self.dashboard,
+                "user_id": self.user_id,
+                "task_id": task_id,
+                "task_start_time": self.task_start_time.isoformat(),
+            }
+            if self.debug:
+                embed_url_params["debug"] = "true"
 
-        embed_url = f"{self.embed_domain}/?{urllib.parse.urlencode(embed_url_params)}&iframe_url={quoted_url}"
+            embed_url = f"{self.embed_domain}/?{urllib.parse.urlencode(embed_url_params)}&iframe_url={sso_url['url']}"
+        else: 
+            sso_url = self.get_sso_url()
+
+            self.event_logger.log_event("user_task_sso_url_generated")
+            quoted_url = urllib.parse.quote(str(sso_url.url), safe="")
+            # Open the local embed container with the SSO URL as a parameter
+            embed_url_params = {
+                "dashboard_id": self.dashboard,
+                "user_id": self.user_id,
+                "task_id": task_id,
+                "task_start_time": self.task_start_time.isoformat(),
+            }
+            if self.debug:
+                embed_url_params["debug"] = "true"
+
+            embed_url = f"{self.embed_domain}/?{urllib.parse.urlencode(embed_url_params)}&iframe_url={quoted_url}"
 
         if not self.do_not_open_url:
             try:
@@ -146,7 +200,7 @@ class DashboardUserObservability(User):
         else:
             self.event_logger.log_event(
                 "looker_embed_task_not_opening_url",
-                embed_url=sso_url.url,
+                embed_url=sso_url['url'] if isinstance(sso_url,dict) else sso_url.url,
                 observability_url=embed_url,
             )
             return
