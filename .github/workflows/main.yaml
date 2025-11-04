@@ -44,6 +44,12 @@ jobs:
             --tag ${{ env.IMAGE_NAME }}:${{ env.TAG }} \
             --gcs-log-dir=gs://${{ secrets.GCP_LOGS_BUCKET_NAME }}/${{ env.APP_NAME }}
 
+      - name: Trigger Website Deploy
+        run: |
+          curl -fSL "$DEPLOY_URL"
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+
       # not needed for this workflow, latest is on release.
       # - name: Add latest tag
       #   run: |
