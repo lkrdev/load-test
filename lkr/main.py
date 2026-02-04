@@ -18,7 +18,6 @@ from lkr.load_test.embed_dashboard_observability.main import DashboardUserObserv
 from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
-# from lkr.load_test.locustfile_cookieless_embed import CookielessEmbedUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
 from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
