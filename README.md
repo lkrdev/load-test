@@ -54,7 +54,7 @@ Attributes, models, and permissions can be specified multiple times to create a 
 Install [uv](https://docs.astral.sh/uv/)
 
 ```sh
-git clone https://github.com/bwebs/looker-locust-testing
+git clone https://github.com/lkrdev/load-test
 cp .env.example .env
 uv run --env-file=.env lkr load-test debug looker
 
