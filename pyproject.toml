@@ -18,6 +18,13 @@ dependencies = [
 
 [tool.uv]
 package = true
+constraint-dependencies = [
+    "h11>=0.16.0",
+    "urllib3>=2.6.0",
+    "Jinja2>=3.1.6",
+    "requests>=2.32.4",
+    "Werkzeug>=3.1.4",
+]
 
 [build-system]
 requires = ["setuptools"]
