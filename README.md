@@ -111,3 +111,4 @@ For a more centralized view of the results for each session, consider using `lkr
 - If you are using a database connection that requires OAuth, this approach will not work.
 - If you are on Looker Core, you will need to be in an embed instance to run this tool. If you are using the query load test, your looker client id and client secret must be an [API only Service Account](https://cloud.google.com/looker/docs/looker-core-user-management#creating_an_api-only_service_account).
 
+
