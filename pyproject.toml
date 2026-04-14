@@ -12,6 +12,7 @@ dependencies = [
     "selenium>=4.28.1",
     "structlog>=25.2.0",
     "typer>=0.15.1",
+    "urllib3>=2.6.3",
 ]
 
 
