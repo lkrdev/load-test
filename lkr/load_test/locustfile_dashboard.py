@@ -46,7 +46,7 @@ class DashboardUser(User):
 
         sso_url = self.sdk.create_sso_embed_url(
             models40.EmbedSsoParams(
-                first_name="Embed",
+                first_name=self.first_name,
                 last_name=self.user_id,
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,

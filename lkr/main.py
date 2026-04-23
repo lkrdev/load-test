@@ -220,6 +220,12 @@ def load_test_cookieless_embed_dashboard(
             help="Enable debug mode",
         ),
     ] = False,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
 ):
     from locust import events
     from locust.env import Environment
@@ -242,6 +248,7 @@ def load_test_cookieless_embed_dashboard(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.first_name = first_name
             super().__init__(*args, **kwargs)
 
     env = Environment(
@@ -310,6 +317,12 @@ def load_test(
             help="How many seconds to wait for the load test to stop",
         ),
     ] = 15,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
 ):
     from locust import events
     from locust.env import Environment
@@ -334,6 +347,7 @@ def load_test(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.first_name = first_name
 
     env = Environment(
         user_classes=[DashboardUserClass], events=events, stop_timeout=stop_timeout
@@ -428,6 +442,12 @@ def load_test_query(
             help="How many iterations to wait for the async query to complete (roughly number of seconds)"
         ),
     ] = 120,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
 ):
     if not query:
         raise typer.BadParameter("At least one --query must be provided")
@@ -451,6 +471,7 @@ def load_test_query(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.first_name = first_name
 
     from locust import events
     from locust.env import Environment
@@ -539,6 +560,12 @@ def load_test_render(
             help="Make each user run its render task only once.", show_default=True
         ),
     ] = False,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
 ):
     if not dashboard:
         raise typer.BadParameter("--dashboard must be provided")
@@ -561,6 +588,7 @@ def load_test_render(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.first_name = first_name
 
     from locust import events
     from locust.env import Environment
@@ -676,7 +704,13 @@ def load_test_embed_observability(
         typer.Option(
             help="An optional Embed User to generate the url for. Only used if '--embed_as_me' flag is selected"
         )
-    ] = ""
+    ] = "",
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
 ):
     """
     Open dashboards with observability metrics. The metrics are collected through Looker's JavaScript events and logged with the specified prefix. This command will:
@@ -722,6 +756,7 @@ def load_test_embed_observability(
             )
             self.embed_as_me = embed_as_me or False
             self.embed_user_id = embed_user_id or ""
+            self.first_name = first_name
 
     env = Environment(
         user_classes=[EmbedDashboardUserClass],

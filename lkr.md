@@ -8,7 +8,7 @@ $ lkr [OPTIONS] COMMAND [ARGS]...
 
 **Options**:
 
-* `--env-file FILE`: Path to the environment file to load  [default: /Users/bryanweber/projects/load-tests/.env]
+* `--env-file FILE`: Path to the environment file to load  [default: /Users/bryanweber/projects/lkr/load-test/.env]
 * `--client-id TEXT`: Looker API client ID
 * `--client-secret TEXT`: Looker API client secret
 * `--base-url TEXT`: Looker API base URL
@@ -35,6 +35,7 @@ $ lkr load-test [OPTIONS] COMMAND [ARGS]...
 **Commands**:
 
 * `debug`: Check that the environment variables are...
+* `cookieless-embed-dashboard`
 * `dashboard`
 * `query`
 * `render`
@@ -59,6 +60,30 @@ $ lkr load-test debug [OPTIONS] TYPE:{looker}
 
 * `--help`: Show this message and exit.
 
+### `lkr load-test cookieless-embed-dashboard`
+
+**Usage**:
+
+```console
+$ lkr load-test cookieless-embed-dashboard [OPTIONS]
+```
+
+**Options**:
+
+* `--dashboard TEXT`: Dashboard ID to run the test on. Keeps dashboard open for user, turn on auto-refresh to keep dashboard updated  [required]
+* `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2  [required]
+* `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
+* `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
+* `--users INTEGER RANGE`: Number of users to run the test with  [default: 25; 1&lt;=x&lt;=1000]
+* `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
+* `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
+* `--stop-timeout INTEGER`: How many seconds to wait for the load test to stop  [default: 15]
+* `--debug`: Enable debug mode
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
+* `--help`: Show this message and exit.
+
 ### `lkr load-test dashboard`
 
 **Usage**:
@@ -79,6 +104,7 @@ $ lkr load-test dashboard [OPTIONS]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--stop-timeout INTEGER`: How many seconds to wait for the load test to stop  [default: 15]
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test query`
@@ -105,6 +131,7 @@ $ lkr load-test query [OPTIONS]
 * `--sticky-sessions / --no-sticky-sessions`: Keep the same user logged in for the duration of the test. sticky_sessions=True is currently not supported with the Looker SDKs, we are working around it in the User class.  [default: no-sticky-sessions]
 * `--query-async / --no-query-async`: Run the query asynchronously  [default: no-query-async]
 * `--async-bail-out INTEGER`: How many iterations to wait for the async query to complete (roughly number of seconds)  [default: 120]
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test render`
@@ -129,6 +156,7 @@ $ lkr load-test render [OPTIONS]
 * `--result-format TEXT`: Format of the rendered output (pdf, png, jpg)  [default: pdf]
 * `--render-bail-out INTEGER`: How many iterations to wait for the render task to complete (roughly number of seconds)  [default: 120]
 * `--run-once / --no-run-once`: Make each user run its render task only once.  [default: no-run-once]
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test embed-observability`
@@ -144,10 +172,10 @@ Open dashboards with observability metrics. The metrics are collected through Lo
      - dashboard:run:complete - Query completion time
      - dashboard:tile:start - Individual tile start time
      - dashboard:tile:complete - Individual tile completion time
-     - page:changed - Dashboard page change completion time
 3. Will also track start and end times for the whole process (looker_embed_task_start and looker_embed_task_complete)
 4. Log all events with timing information to help analyze performance in a JSON format.  Events begin with &lt;log_event_prefix&gt;:*
 5. Automatically stop after the specified run time
+6. Optionally, if multiple are ID&#x27;s are provided to dashboard then we&#x27;ll monitor performance of tabbing between each report.
 
 **Usage**:
 
@@ -157,7 +185,7 @@ $ lkr load-test embed-observability [OPTIONS]
 
 **Options**:
 
-* `--dashboard TEXT`: Dashboard ID to render. Alternatively provide a comma seperated list of ID's to cycle through load times for.  [required]
+* `--dashboard TEXT`: Dashboard ID to render. Alternatively, provide a comma seperated list of dashboard ID&#x27;s and we&#x27;ll simulate navigating between dashboard tabs all within the iFrame and observe performance.  [required]
 * `--users INTEGER RANGE`: Number of users to run the test with  [default: 5; 1&lt;=x&lt;=1000]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
@@ -173,9 +201,11 @@ $ lkr load-test embed-observability [OPTIONS]
 * `--log-event-prefix TEXT`: Prefix to add to the log event  [default: looker-embed-observability]
 * `--open-url / --no-open-url`: Do not open the URL in the observability browser, useful for viewing a user&#x27;s embed dashboard when running locally  [default: open-url]
 * `--debug`: Enable debug mode
+* `--embed-as-me / --no-embed-as-me`: An optional flag to generate the url as an existing embed user. This means no user sensitive info is encoded in the url. 
+If selected the &#x27;--embed_user_id&#x27; flag is also required to login as a specific embed user.  [default: no-embed-as-me]
+* `--embed-user-id TEXT`: An optional Embed User to generate the url for. Only used if &#x27;--embed_as_me&#x27; flag is selected
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--help`: Show this message and exit.
-* `--embed-as-me BOOLEAN`: If true, the embed url will be generated as the target user [default: False]
-* `--embed-user-id TEXT`: If `--embed-as-me` is set to True SSO url will be generated as this user.
 
 ### `lkr load-test delete-embed-users`
 

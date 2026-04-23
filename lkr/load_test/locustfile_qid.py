@@ -102,7 +102,7 @@ class QueryUser(User):
         attributes = format_attributes(self.attributes)
         embed_session = sdk.acquire_embed_cookieless_session(
             models40.EmbedCookielessSessionAcquire(
-                first_name="Embed",
+                first_name=self.first_name,
                 last_name=self.user_id,
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,

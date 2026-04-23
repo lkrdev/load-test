@@ -7,7 +7,7 @@ A command-line tool for load testing Looker dashboards, queries, rendered dashbo
 - `lkr load-test query`: Run a load test on a query.
 - `lkr load-test render`: Run a load test on a rendered dashboard.
 - `lkr load-test embed-observability`: Open dashboards with observability metrics in an embedded context.
-- `lkr load-test delete-embed-users`: Delete all embed users that were created by this tool. Identifiable by their first name "Embed".
+- `lkr load-test delete-embed-users`: Delete all embed users that were created by this tool. Identifiable by their first name "Embed" (can be customized with `--first-name`).
 - `lkr load-test cookieless-embed-dashboard`: Run a load test on a cookieless dashboard.
 
 ## How it works
@@ -69,9 +69,9 @@ uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute 
 
 
 ```
-docker run --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr --client=id=abc --client-secret=123 --base-url=https://your-looker-instance.cloud.looker.com load-test dashboard --dashboard=1 --users=5 --run-time=1
+docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test dashboard --dashboard=1 --users=5 --run-time=1 --first-name=Embed
 
-docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
+docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080 --first-name=Embed
 ```
 
 ### Internet-Isolated Environments
