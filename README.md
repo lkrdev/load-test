@@ -80,7 +80,7 @@ If you are running the load test in an internet-isolated VPC environment (e.g., 
 
 The Docker image has `SE_OFFLINE=true` baked in as a default environment variable to disable Selenium Manager's online checks. This forces the application to use the pre-installed `chromium-driver` and Chromium browser inside the image.
 
-### Overriding the Default
+#### Overriding the Default
 
 If you are running in a connected environment and want to allow Selenium to go online for updates, you can override this setting by passing the environment variable:
 
