@@ -28,10 +28,6 @@ def get_user_id() -> str:
     return "embed-" + str(random.randint(1000000000, 9999999999))
 
 
-def get_embed_first_name() -> str:
-    return os.environ.get("EMBED_FIRST_NAME", "Embed")
-
-
 def get_external_group_id(
     external_group_id: str | None = None, external_group_prefix: str | None = None
 ) -> str | None:

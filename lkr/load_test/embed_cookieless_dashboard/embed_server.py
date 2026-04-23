@@ -55,9 +55,10 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
             attributes_str = os.environ.get("ATTRIBUTES", "[]")
             attributes_list = json.loads(attributes_str)
             user_attributes = format_attributes(attributes_list)
+            first_name = os.environ.get("FIRST_NAME", "Cookieless Embed")
 
             user_session = models40.EmbedCookielessSessionAcquire(
-                first_name="Cookieless Embed",
+                first_name=first_name,
                 last_name=user_id,
                 external_user_id=user_id,
                 session_length=3600,

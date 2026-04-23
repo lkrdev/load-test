@@ -34,6 +34,7 @@ class CookielessEmbedDashboardUser(User):
         self.dashboard: str = getattr(self, 'dashboard', "")
         self.models: List[str] = getattr(self, 'models', [])
         self.attributes: List[str] = getattr(self, 'attributes', [])
+        self.first_name: str = getattr(self, 'first_name', 'Embed')
 
         server_path = os.path.join(
             os.path.dirname(__file__),
@@ -50,6 +51,7 @@ class CookielessEmbedDashboardUser(User):
         lEnv["MODELS"] = ",".join(self.models)
         lEnv["GROUP_IDS"] = ",".join(self.group_ids)
         lEnv["ATTRIBUTES"] = json.dumps(self.attributes)
+        lEnv["FIRST_NAME"] = self.first_name
         if self.external_group_id:
             lEnv["EXTERNAL_GROUP_ID"] = self.external_group_id
 

@@ -21,7 +21,6 @@ from lkr.load_test.utils import (
     format_attributes,
     get_user_id,
     now,
-    get_embed_first_name,
 )
 
 logger = structlog.get_logger(name="looker-embed-observability")
@@ -61,7 +60,7 @@ class DashboardUserObservability(User):
             raise ValueError("SDK not initialized")
         sso_url = self.sdk.create_sso_embed_url(
             models40.EmbedSsoParams(
-                first_name=get_embed_first_name(),
+                first_name=self.first_name,
                 last_name=self.user_id,
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,

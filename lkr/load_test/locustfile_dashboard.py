@@ -12,7 +12,6 @@ from lkr.load_test.utils import (
     PERMISSIONS,
     format_attributes,
     get_user_id,
-    get_embed_first_name,
 )
 
 __all__ = ["DashboardUser"]
@@ -47,7 +46,7 @@ class DashboardUser(User):
 
         sso_url = self.sdk.create_sso_embed_url(
             models40.EmbedSsoParams(
-                first_name=get_embed_first_name(),
+                first_name=self.first_name,
                 last_name=self.user_id,
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,
