@@ -74,6 +74,8 @@ docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSD
 docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
 ```
 
+> **Note**: You can use the `EMBED_FIRST_NAME` environment variable to customize the first name of the embed users created by the tool. By default, it is "Embed".
+
 ### Example Deploy with Cloud Run Job
 
 This is an example job to run a load test on a dashboard with 200 users for 10 minutes for dashboard id 1.  Note that the dashboard has [Auto Refresh](https://cloud.google.com/looker/docs/editing-user-defined-dashboards#autorefresh) enabled. If you do not have auto refresh enabled, then the user will load the dashboard and just sit there without running more queries. Cloud Run Jobs let you manage multiple concurrent jobs and scale them up and down as needed with --tasks; this is the fastest easiest way to run a large scale load test.
