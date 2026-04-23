@@ -74,6 +74,26 @@ docker run --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-test
 docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
 ```
 
+### Internet-Isolated Environments
+
+If you are running the load test in an internet-isolated VPC environment (e.g., without Cloud NAT or internet egress), you need to prevent the application from trying to download Chrome version info or sending stats.
+
+The Docker image has `SE_OFFLINE=true` baked in as a default environment variable to disable Selenium Manager's online checks. This forces the application to use the pre-installed `chromium-driver` and Chromium browser inside the image.
+
+#### Overriding the Default
+
+If you are running in a connected environment and want to allow Selenium to go online for updates, you can override this setting by passing the environment variable:
+
+##### In Docker:
+```bash
+docker run -e SE_OFFLINE=false us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr ...
+```
+
+##### In Cloud Run Jobs:
+Add `SE_OFFLINE=false` to the `--set-env-vars` flag:
+```bash
+--set-env-vars=LOOKERSDK_CLIENT_ID=...,SE_OFFLINE=false
+```
 ### Example Deploy with Cloud Run Job
 
 This is an example job to run a load test on a dashboard with 200 users for 10 minutes for dashboard id 1.  Note that the dashboard has [Auto Refresh](https://cloud.google.com/looker/docs/editing-user-defined-dashboards#autorefresh) enabled. If you do not have auto refresh enabled, then the user will load the dashboard and just sit there without running more queries. Cloud Run Jobs let you manage multiple concurrent jobs and scale them up and down as needed with --tasks; this is the fastest easiest way to run a large scale load test.
