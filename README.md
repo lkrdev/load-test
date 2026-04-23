@@ -86,7 +86,7 @@ If you are running in a connected environment and want to allow Selenium to go o
 
 #### In Docker:
 ```bash
-docker run -e SE_OFFLINE=false load-test-isolated:latest lkr ...
+docker run -e SE_OFFLINE=false us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr ...
 ```
 
 #### In Cloud Run Jobs:
