@@ -74,7 +74,7 @@ docker run --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-test
 docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
 ```
 
-## Internet-Isolated Environments
+### Internet-Isolated Environments
 
 If you are running the load test in an internet-isolated VPC environment (e.g., without Cloud NAT or internet egress), you need to prevent the application from trying to download Chrome version info or sending stats.
 
