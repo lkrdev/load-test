@@ -69,7 +69,7 @@ uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute 
 
 
 ```
-docker run --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr --client=id=abc --client-secret=123 --base-url=https://your-looker-instance.cloud.looker.com load-test dashboard --dashboard=1 --users=5 --run-time=1
+docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -e EMBED_FIRST_NAME=Embed --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test dashboard --dashboard=1 --users=5 --run-time=1
 
 docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSDK_BASE_URL="https://your-looker-instance.cloud.looker.com" -p 8080:8080 --pull=always us-central1-docker.pkg.dev/lkr-dev-production/load-tests/cli:latest lkr load-test embed-observability --model=thelook --dashboard=1 --attribute="store:random.randint(0,7000)" --spawn-rate=1 --users=1 --run-time=2 --completion-timeout=45 --port=8080
 ```
