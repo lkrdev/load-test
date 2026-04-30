@@ -1,3 +1,9 @@
+import sys
+
+if "--gevent-patch" in sys.argv:
+    from gevent import monkey
+    monkey.patch_all()
+
 import os
 import pathlib
 from concurrent.futures import ThreadPoolExecutor, as_completed, wait
@@ -54,6 +60,10 @@ class LookerApiCredentials:
 @app.callback()
 def load_env(
     ctx: typer.Context,
+    gevent_patch: Annotated[
+        bool,
+        typer.Option("--gevent-patch", help="Apply gevent monkey patching to support blocking I/O in Locust"),
+    ] = False,
     env_file: Annotated[
         Optional[pathlib.Path],
         typer.Option(
@@ -80,6 +90,8 @@ def load_env(
     if not ctx.invoked_subcommand:
         return
     load_dotenv(dotenv_path=env_file, override=True)
+    if gevent_patch:
+        print("Gevent monkey patching was applied at startup.")
     validate_api_credentials(
         client_id=client_id, client_secret=client_secret, base_url=base_url
     )

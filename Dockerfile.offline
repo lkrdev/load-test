@@ -1,0 +1,19 @@
+FROM python:3.13-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends chromium-driver iptables \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+COPY lkr ./lkr
+
+ENV SE_OFFLINE=true
+ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
+RUN uv sync --frozen --no-dev
+
+# We do NOT switch to a non-root user here because we need to run iptables in the container.
+# For testing purposes, running as root allows us to easily set up the firewall rules.
