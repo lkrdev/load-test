@@ -53,7 +53,7 @@
         let currentDashboardIndex = 0;
         let forward = true;
         // Listen for Looker embed events
-        window.addEventListener('message', function(event) {
+        window.addEventListener('message', async function(event) {
             if (debug) {
                 console.log("event message", event.origin, event.data);
             }
@@ -79,13 +79,13 @@
                     console.log(eventData);
                 }
                 // Send event data to the server
-                fetch('/log_event', {
+                await fetch('/log_event', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(eventData)
-                });
+                }).catch(e => console.error("Failed to log event", e));
 
                 // Track received events
                 if (type === 'dashboard:run:complete') {

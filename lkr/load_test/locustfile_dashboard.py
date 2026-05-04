@@ -6,6 +6,7 @@ import looker_sdk
 from looker_sdk import models40
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from urllib.parse import urlparse
 
 from lkr.load_test.utils import (
     MAX_SESSION_LENGTH,
@@ -37,10 +38,23 @@ class DashboardUser(User):
         chrome_options = Options()
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
+        
+        # Fail fast in restricted network environments (VPCSC)
+        chrome_options.page_load_strategy = "eager"
+        looker_url = os.environ.get("LOOKERSDK_BASE_URL", "")
+        looker_host = urlparse(looker_url).hostname
+        
+        rules = "MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1"
+        if looker_host:
+            rules += f", EXCLUDE {looker_host}"
+        chrome_options.add_argument(f"--host-resolver-rules={rules}")
+
         self.driver = webdriver.Chrome(options=chrome_options)
 
     def on_start(self):
         # Initialize the SDK - make sure to set your environment variables
+        if "LOOKERSDK_TIMEOUT" not in os.environ:
+            os.environ["LOOKERSDK_TIMEOUT"] = "10"
         self.sdk = looker_sdk.init40()
         attributes = format_attributes(self.attributes)
 
