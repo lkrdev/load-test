@@ -109,6 +109,8 @@ class DashboardUserObservability(User):
 
     def on_start(self):
         # Initialize the SDK - make sure to set your environment variables
+        if "LOOKERSDK_TIMEOUT" not in os.environ:
+            os.environ["LOOKERSDK_TIMEOUT"] = "10"
         self.sdk = looker_sdk.init40()
 
     # TODO: Causing greenlet issues
@@ -132,13 +134,23 @@ class DashboardUserObservability(User):
         self.event_logger.log_event("user_task_start")
 
         chrome_options = Options()
-        chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
+        if self.debug:
+            chrome_options.set_capability("goog:loggingPrefs", {"browser": "ALL", "performance": "ALL"})
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--enable-logging")
         chrome_options.add_argument("--v=1")
+        
+        # Fail fast in isolated networks: don't wait for assets, and block external traffic instantly
+        chrome_options.page_load_strategy = "eager"
+        looker_url = os.environ.get("LOOKERSDK_BASE_URL", "")
+        looker_host = urllib.parse.urlparse(looker_url).hostname
+        rules = "MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1"
+        if looker_host:
+            rules += f", EXCLUDE {looker_host}"
+        chrome_options.add_argument(f"--host-resolver-rules={rules}")
 
         chrome_options.add_experimental_option(
             "prefs",
@@ -154,7 +166,6 @@ class DashboardUserObservability(User):
 
         if self.embed_as_me:
             sso_url = self.get_embed_url_as_me()
-            print(sso_url)
 
             self.event_logger.log_event("user_task_embed_url_as_me_generated")
             # Open the local embed container with the SSO URL as a parameter

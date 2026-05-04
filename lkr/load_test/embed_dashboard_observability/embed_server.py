@@ -1,7 +1,7 @@
 import json
 import re
 from datetime import datetime, timezone
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import structlog
@@ -74,7 +74,7 @@ def run_server(port=3000, log_event_prefix="looker_embed_observability"):
             self.log_event_prefix = log_event_prefix
 
     server_address = ("", port)
-    httpd = HTTPServer(server_address, EmbedHandlerWithPrefix)
+    httpd = ThreadingHTTPServer(server_address, EmbedHandlerWithPrefix)
     logger.info(
         f"{log_event_prefix}:embed_server_started",
         port=port,

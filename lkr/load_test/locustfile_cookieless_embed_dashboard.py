@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from urllib.parse import urlparse
 
 def get_free_port():
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,6 +55,10 @@ class CookielessEmbedDashboardUser(User):
         lEnv["FIRST_NAME"] = self.first_name
         if self.external_group_id:
             lEnv["EXTERNAL_GROUP_ID"] = self.external_group_id
+        
+        # Fail fast in Python: set timeout for Looker SDK requests
+        if "LOOKERSDK_TIMEOUT" not in lEnv:
+            lEnv["LOOKERSDK_TIMEOUT"] = "10"
 
         self.server_process = subprocess.Popen(
             server_cmd, env=lEnv
@@ -83,6 +88,20 @@ class CookielessEmbedDashboardUser(User):
         chrome_options.add_argument("--enable-logging")
         chrome_options.add_argument("--v=1")
 
+        # Speed up page loading by not waiting for non-critical subresources (CSS, images, fonts)
+        chrome_options.page_load_strategy = "eager"
+
+        # In VPCSC, block everything except required hosts to trigger immediate failure
+        # instead of waiting for a 60-second network timeout.
+        looker_url = os.environ.get("LOOKERSDK_BASE_URL", "")
+        looker_host = urlparse(looker_url).hostname
+        
+        rules = "MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1"
+        if looker_host:
+            rules += f", EXCLUDE {looker_host}"
+            
+        chrome_options.add_argument(f"--host-resolver-rules={rules}")
+
         chrome_options.add_experimental_option(
             "prefs",
             {
@@ -108,10 +127,23 @@ class CookielessEmbedDashboardUser(User):
             for entry in self.driver.get_log('browser'):
                 print(entry)
     
-    # def on_stop(self):
-    #     self.driver.quit()
-    #     self.server_process.terminate()
-    #     self.server_process.wait()
+    def on_stop(self):
+        try:
+            if hasattr(self, "driver") and self.driver:
+                self.driver.quit()
+        except BaseException as e:
+            print(f"Notice: Exception during driver.quit(): {e}")
+        finally:
+            self.driver = None
+
+        try:
+            if hasattr(self, "server_process") and self.server_process:
+                self.server_process.terminate()
+                self.server_process.wait()
+        except BaseException as e:
+            print(f"Notice: Exception during server cleanup: {e}")
+        finally:
+            self.server_process = None
 
     @task
     def do_nothing(self):

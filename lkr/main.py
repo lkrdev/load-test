@@ -1,6 +1,6 @@
 import sys
 
-if "--gevent-patch" in sys.argv:
+if "--no-gevent-patch" not in sys.argv:
     from gevent import monkey
     monkey.patch_all()
 
@@ -60,9 +60,9 @@ class LookerApiCredentials:
 @app.callback()
 def load_env(
     ctx: typer.Context,
-    gevent_patch: Annotated[
+    no_gevent_patch: Annotated[
         bool,
-        typer.Option("--gevent-patch", help="Apply gevent monkey patching to support blocking I/O in Locust"),
+        typer.Option("--no-gevent-patch", help="Disable gevent monkey patching"),
     ] = False,
     env_file: Annotated[
         Optional[pathlib.Path],
@@ -90,7 +90,7 @@ def load_env(
     if not ctx.invoked_subcommand:
         return
     load_dotenv(dotenv_path=env_file, override=True)
-    if gevent_patch:
+    if not no_gevent_patch:
         print("Gevent monkey patching was applied at startup.")
     validate_api_credentials(
         client_id=client_id, client_secret=client_secret, base_url=base_url

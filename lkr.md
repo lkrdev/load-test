@@ -8,7 +8,8 @@ $ lkr [OPTIONS] COMMAND [ARGS]...
 
 **Options**:
 
-* `--env-file FILE`: Path to the environment file to load  [default: /Users/bryanweber/projects/lkr/load-test/.env]
+* `--no-gevent-patch`: Disable gevent monkey patching
+* `--env-file FILE`: Path to the environment file to load  [default: /usr/local/google/home/bryanweber/lkrdev/load-test/.env]
 * `--client-id TEXT`: Looker API client ID
 * `--client-secret TEXT`: Looker API client secret
 * `--base-url TEXT`: Looker API base URL

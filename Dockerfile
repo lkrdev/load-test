@@ -12,6 +12,7 @@ COPY pyproject.toml uv.lock ./
 COPY lkr ./lkr
 
 ENV SE_OFFLINE=true
+ENV SE_AVOID_STATS=true
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 RUN uv sync --frozen --no-dev
 
