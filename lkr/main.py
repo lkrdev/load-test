@@ -14,6 +14,7 @@ from typing import Annotated, List, Optional
 import gevent
 import locust  # noqa
 import looker_sdk
+import structlog
 import typer
 from dotenv import load_dotenv
 from locust import events
@@ -25,6 +26,7 @@ from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
+from lkr.load_test.locustfile_dashboard_queries import DashboardQueriesUser
 from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
 
@@ -64,6 +66,10 @@ def load_env(
         bool,
         typer.Option("--no-gevent-patch", help="Disable gevent monkey patching"),
     ] = False,
+    json_log: Annotated[
+        bool,
+        typer.Option("--json-log", help="Enable JSON logging"),
+    ] = False,
     env_file: Annotated[
         Optional[pathlib.Path],
         typer.Option(
@@ -90,8 +96,26 @@ def load_env(
     if not ctx.invoked_subcommand:
         return
     load_dotenv(dotenv_path=env_file, override=True)
+    processors = [
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.add_log_level,
+    ]
+    if json_log:
+        processors.append(structlog.processors.JSONRenderer())
+
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    if log_level not in ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]:
+        typer.echo(f"LOG_LEVEL: {log_level} is not a valid log level. Defaulting to INFO.")
+        log_level = "INFO"
+
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
+    )
+
     if not no_gevent_patch:
-        print("Gevent monkey patching was applied at startup.")
+        structlog.get_logger().info("Gevent monkey patching was applied at startup.")
+    
     validate_api_credentials(
         client_id=client_id, client_secret=client_secret, base_url=base_url
     )
@@ -111,6 +135,7 @@ def check_settings(
         "embed-observability",
         "cookieless-embed",
         "cookieless-embed-dashboard",
+        "dashboard-queries",
     ]:
         sdk = looker_sdk.init40()
         # check for embed turned on
@@ -132,7 +157,7 @@ def check_settings(
             )
             raise typer.Exit(1)
 
-        if ctx.invoked_subcommand in ["query", "render", "cookieless-embed", "cookieless-embed-dashboard"]:
+        if ctx.invoked_subcommand in ["query", "render", "cookieless-embed", "cookieless-embed-dashboard", "dashboard-queries"]:
             # check for embed cookieless v2
             if not setting.embed_cookieless_v2:
                 typer.echo(
@@ -239,12 +264,11 @@ def load_test_cookieless_embed_dashboard(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test on a dashboard using Cookieless Embed V2.
+    """
     from locust import events
     from locust.env import Environment
-
-    """
-    Run a load test on a dashboard or API query
-    """
 
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
@@ -336,12 +360,11 @@ def load_test(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test on a dashboard using standard SSO embedding.
+    """
     from locust import events
     from locust.env import Environment
-
-    """
-    Run a load test on a dashboard or API query
-    """
 
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
@@ -461,6 +484,9 @@ def load_test_query(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test by executing specific queries by ID.
+    """
     if not query:
         raise typer.BadParameter("At least one --query must be provided")
     if not model:
@@ -502,6 +528,138 @@ def load_test_query(
         if runner.greenlet:
             runner.greenlet.kill(block=False)
         typer.Exit(1)
+
+    if runner.spawning_greenlet:
+        runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
+    runner.greenlet.join()
+
+
+@group.command(name="dashboard-queries")
+def load_test_dashboard_queries(
+    dashboard: Annotated[
+        List[str],
+        typer.Option(help="Dashboard ID to extract queries from"),
+    ],
+    users: Annotated[
+        int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
+    ] = 25,
+    spawn_rate: Annotated[
+        float,
+        typer.Option(help="Number of users to spawn per second", min=0, max=100),
+    ] = 1,
+    run_time: Annotated[
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
+    ] = 5,
+    model: Annotated[
+        List[str] | None,
+        typer.Option(
+            help="Model to run the test on. Specify multiple models as --model model1 --model model2"
+        ),
+    ] = None,
+    attribute: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format"
+        ),    ] = [],
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456"
+        ),    ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
+    wait_time_min: Annotated[
+        int,
+        typer.Option(
+            help="User tasks have a random wait time between this and the max wait time",
+            min=1,
+            max=100,
+        ),
+    ] = 1,
+    wait_time_max: Annotated[
+        int,
+        typer.Option(
+            help="User tasks have a random wait time between this and the min wait time",
+            min=1,
+            max=100,
+        ),
+    ] = 15,
+    sticky_sessions: Annotated[
+        bool,
+        typer.Option(
+            help="Keep the same user logged in for the duration of the test."
+        ),
+    ] = False,
+    query_async: Annotated[
+        bool, typer.Option(help="Run the query asynchronously")
+    ] = False,
+    async_bail_out: Annotated[
+        int,
+        typer.Option(
+            help="How many iterations to wait for the async query to complete (roughly number of seconds)"
+        ),
+    ] = 120,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
+):
+    """
+    Run queries from specified dashboards with custom logging.
+    This command allows you to test dashboard performance by executing the queries that power the dashboards.
+    """
+    
+    if not dashboard:
+        raise typer.BadParameter("At least one --dashboard must be provided")
+    if not model:
+        raise typer.BadParameter("At least one --model must be provided")
+    from locust import between
+
+    class DashboardQueriesUserClass(DashboardQueriesUser):
+        wait_time = between(wait_time_min, wait_time_max)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.attributes = attribute
+            self.dashboard_ids = dashboard
+            self.models = model
+            self.result_format = "json_bi"
+            self.query_async = query_async
+            self.async_bail_out = async_bail_out
+            self.sticky_sessions = sticky_sessions
+            self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
+            self.first_name = first_name
+
+    from locust import events
+    from locust.env import Environment
+
+    env = Environment(
+        user_classes=[DashboardQueriesUserClass],
+        events=events,
+    )
+    runner = env.create_local_runner()
+
+    runner.start(user_count=users, spawn_rate=spawn_rate)
+
+    def quit_runner():
+        runner.stop()
+        if runner.greenlet:
+            runner.greenlet.kill(block=False)
 
     if runner.spawning_greenlet:
         runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
@@ -579,6 +737,9 @@ def load_test_render(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test by requesting renders (PDF/PNG/JPG) of a dashboard.
+    """
     if not dashboard:
         raise typer.BadParameter("--dashboard must be provided")
     if not model:
