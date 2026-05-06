@@ -5,6 +5,7 @@ A command-line tool for load testing Looker dashboards, queries, rendered dashbo
 
 - `lkr load-test dashboard`: Run a load test on a dashboard.
 - `lkr load-test query`: Run a load test on a query.
+- `lkr load-test dashboard-queries`: Run a load test on queries extracted from a list of dashboards.
 - `lkr load-test render`: Run a load test on a rendered dashboard.
 - `lkr load-test embed-observability`: Open dashboards with observability metrics in an embedded context.
 - `lkr load-test delete-embed-users`: Delete all embed users that were created by this tool. Identifiable by their first name "Embed" (can be customized with `--first-name`).
@@ -61,6 +62,9 @@ uv run --env-file=.env lkr load-test debug looker
 # Run a load test on a query with auto refresh
 uv run lkr load-test query --query=BLYyJ70e7HCeBQJrxXanHi --users=1 --run-time=5 --model=thelook --attribute "store:random.randint(1,7000)" --query-async
 
+# Run a load test on queries extracted from a dashboard
+uv run lkr load-test dashboard-queries --dashboard=1 --users=5 --run-time=5 --attribute "store:random.randint(1,7000)" --model=thelook
+
 # Run a load test on a dashboard with auto refresh
 uv run lkr load-test dashboard --dashboard=1 --users=5 --run-time=5 --attribute "store:random.randint(1,7000)" --model=thelook
 ```
@@ -79,6 +83,9 @@ docker run -e LOOKERSDK_CLIENT_ID=abc -e LOOKERSDK_CLIENT_SECRET=123 -e LOOKERSD
 If you are running the load test in an internet-isolated VPC environment (e.g., without Cloud NAT or internet egress), you need to prevent the application from trying to download Chrome version info or sending stats.
 
 The Docker image has `SE_OFFLINE=true` baked in as a default environment variable to disable Selenium Manager's online checks. This forces the application to use the pre-installed `chromium-driver` and Chromium browser inside the image.
+
+> [!IMPORTANT]
+> **VPC-SC / Locked-down Environments**: `lkr load-test dashboard` and `lkr load-test embed-observability` may not work in a locked-down environment (such as VPC-SC) because they require loading assets from the internet.
 
 #### Overriding the Default
 
@@ -120,6 +127,8 @@ gcloud run jobs create lkr-load-test-dashboard \
 After the job is created, you can see open up [Google Cloud Run Jobs](https://console.cloud.google.com/run/jobs) and iterate from there.
 
 One common pattern is to run multiple jobs with different parameters, testing more than just a single use case. With Cloud Run Jobs, you can run a set of jobs once, edit the configuration with other parameters (e.g., dashboard=1 then query=abc123) and run again. Executing the jobs one after the other will parallelize the different parameters.
+
+
 
 ## Viewing the results
 

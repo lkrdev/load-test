@@ -9,6 +9,7 @@ $ lkr [OPTIONS] COMMAND [ARGS]...
 **Options**:
 
 * `--no-gevent-patch`: Disable gevent monkey patching
+* `--json-log`: Enable JSON logging
 * `--env-file FILE`: Path to the environment file to load  [default: /usr/local/google/home/bryanweber/lkrdev/load-test/.env]
 * `--client-id TEXT`: Looker API client ID
 * `--client-secret TEXT`: Looker API client secret
@@ -39,6 +40,7 @@ $ lkr load-test [OPTIONS] COMMAND [ARGS]...
 * `cookieless-embed-dashboard`
 * `dashboard`
 * `query`
+* `dashboard-queries`
 * `render`
 * `embed-observability`: Open dashboards with observability metrics.
 * `delete-embed-users`: Remove all embed users for a dashboard
@@ -130,6 +132,33 @@ $ lkr load-test query [OPTIONS]
 * `--wait-time-min INTEGER RANGE`: User tasks have a random wait time between this and the max wait time  [default: 1; 1&lt;=x&lt;=100]
 * `--wait-time-max INTEGER RANGE`: User tasks have a random wait time between this and the min wait time  [default: 15; 1&lt;=x&lt;=100]
 * `--sticky-sessions / --no-sticky-sessions`: Keep the same user logged in for the duration of the test. sticky_sessions=True is currently not supported with the Looker SDKs, we are working around it in the User class.  [default: no-sticky-sessions]
+* `--query-async / --no-query-async`: Run the query asynchronously  [default: no-query-async]
+* `--async-bail-out INTEGER`: How many iterations to wait for the async query to complete (roughly number of seconds)  [default: 120]
+* `--first-name TEXT`: First name of the embed user  [default: Embed]
+* `--help`: Show this message and exit.
+
+### `lkr load-test dashboard-queries`
+
+**Usage**:
+
+```console
+$ lkr load-test dashboard-queries [OPTIONS]
+```
+
+**Options**:
+
+* `--dashboard TEXT`: Dashboard ID to extract queries from  [required]
+* `--users INTEGER RANGE`: Number of users to run the test with  [default: 25; 1&lt;=x&lt;=1000]
+* `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
+* `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
+* `--model TEXT`: Model to run the test on. Specify multiple models as --model model1 --model model2
+* `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Accepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
+* `--group TEXT`: Looker group IDs to add to the user. Useful when you have a closed system and need to test with content in a shared folder. Accepts multiple arguments --group 123 --group 456
+* `--external-group-id TEXT`: External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix
+* `--external-group-id-prefix TEXT`: Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string  [default: embed]
+* `--wait-time-min INTEGER RANGE`: User tasks have a random wait time between this and the max wait time  [default: 1; 1&lt;=x&lt;=100]
+* `--wait-time-max INTEGER RANGE`: User tasks have a random wait time between this and the min wait time  [default: 15; 1&lt;=x&lt;=100]
+* `--sticky-sessions / --no-sticky-sessions`: Keep the same user logged in for the duration of the test.  [default: no-sticky-sessions]
 * `--query-async / --no-query-async`: Run the query asynchronously  [default: no-query-async]
 * `--async-bail-out INTEGER`: How many iterations to wait for the async query to complete (roughly number of seconds)  [default: 120]
 * `--first-name TEXT`: First name of the embed user  [default: Embed]
