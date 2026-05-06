@@ -96,23 +96,22 @@ def load_env(
     if not ctx.invoked_subcommand:
         return
     load_dotenv(dotenv_path=env_file, override=True)
+    processors = [
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.add_log_level,
+    ]
     if json_log:
-        structlog.configure(
-            processors=[
-                structlog.processors.TimeStamper(fmt="iso"),
-                structlog.processors.add_log_level,
-                structlog.processors.JSONRenderer()
-            ]
-        )
-    log_level = os.environ.get("LOG_LEVEL", "INFO")
-    if log_level:
-        log_level = log_level.upper()
-        if log_level not in ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]:
-            typer.echo(f"LOG_LEVEL: {log_level} is not a valid log level. Defaulting to INFO.")
-            log_level = "INFO"
-        structlog.configure(
-            wrapper_class=structlog.make_filtering_bound_logger(log_level),
-        )
+        processors.append(structlog.processors.JSONRenderer())
+
+    log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
+    if log_level not in ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]:
+        typer.echo(f"LOG_LEVEL: {log_level} is not a valid log level. Defaulting to INFO.")
+        log_level = "INFO"
+
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.make_filtering_bound_logger(log_level),
+    )
 
     if not no_gevent_patch:
         structlog.get_logger().info("Gevent monkey patching was applied at startup.")
@@ -265,12 +264,11 @@ def load_test_cookieless_embed_dashboard(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test on a dashboard using Cookieless Embed V2.
+    """
     from locust import events
     from locust.env import Environment
-
-    """
-    Run a load test on a dashboard or API query
-    """
 
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
@@ -362,12 +360,11 @@ def load_test(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test on a dashboard using standard SSO embedding.
+    """
     from locust import events
     from locust.env import Environment
-
-    """
-    Run a load test on a dashboard or API query
-    """
 
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
@@ -487,6 +484,9 @@ def load_test_query(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test by executing specific queries by ID.
+    """
     if not query:
         raise typer.BadParameter("At least one --query must be provided")
     if not model:
@@ -616,6 +616,11 @@ def load_test_dashboard_queries(
         ),
     ] = "Embed",
 ):
+    """
+    Run queries from specified dashboards with custom logging.
+    This command allows you to test dashboard performance by executing the queries that power the dashboards.
+    """
+    
     if not dashboard:
         raise typer.BadParameter("At least one --dashboard must be provided")
     if not model:
@@ -655,7 +660,6 @@ def load_test_dashboard_queries(
         runner.stop()
         if runner.greenlet:
             runner.greenlet.kill(block=False)
-        typer.Exit(1)
 
     if runner.spawning_greenlet:
         runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
@@ -733,6 +737,9 @@ def load_test_render(
         ),
     ] = "Embed",
 ):
+    """
+    Run a load test by requesting renders (PDF/PNG/JPG) of a dashboard.
+    """
     if not dashboard:
         raise typer.BadParameter("--dashboard must be provided")
     if not model:

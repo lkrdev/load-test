@@ -37,11 +37,11 @@ $ lkr load-test [OPTIONS] COMMAND [ARGS]...
 **Commands**:
 
 * `debug`: Check that the environment variables are...
-* `cookieless-embed-dashboard`
-* `dashboard`
-* `query`
-* `dashboard-queries`
-* `render`
+* `cookieless-embed-dashboard`: Run a load test on a dashboard using...
+* `dashboard`: Run a load test on a dashboard using...
+* `query`: Run a load test by executing specific...
+* `dashboard-queries`: Run queries from specified dashboards with...
+* `render`: Run a load test by requesting renders...
 * `embed-observability`: Open dashboards with observability metrics.
 * `delete-embed-users`: Remove all embed users for a dashboard
 
@@ -64,6 +64,8 @@ $ lkr load-test debug [OPTIONS] TYPE:{looker}
 * `--help`: Show this message and exit.
 
 ### `lkr load-test cookieless-embed-dashboard`
+
+Run a load test on a dashboard using Cookieless Embed V2.
 
 **Usage**:
 
@@ -89,6 +91,8 @@ $ lkr load-test cookieless-embed-dashboard [OPTIONS]
 
 ### `lkr load-test dashboard`
 
+Run a load test on a dashboard using standard SSO embedding.
+
 **Usage**:
 
 ```console
@@ -111,6 +115,8 @@ $ lkr load-test dashboard [OPTIONS]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test query`
+
+Run a load test by executing specific queries by ID.
 
 **Usage**:
 
@@ -139,6 +145,9 @@ $ lkr load-test query [OPTIONS]
 
 ### `lkr load-test dashboard-queries`
 
+Run queries from specified dashboards with custom logging.
+This command allows you to test dashboard performance by executing the queries that power the dashboards.
+
 **Usage**:
 
 ```console
@@ -165,6 +174,8 @@ $ lkr load-test dashboard-queries [OPTIONS]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test render`
+
+Run a load test by requesting renders (PDF/PNG/JPG) of a dashboard.
 
 **Usage**:
 

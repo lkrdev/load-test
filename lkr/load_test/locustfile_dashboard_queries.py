@@ -27,6 +27,10 @@ __all__ = ["DashboardQueriesUser"]
 
 
 class DashboardQueriesUser(User):
+    """
+    Locust user that extracts queries from specified dashboards and runs them.
+    Supports both synchronous and asynchronous query execution.
+    """
     abstract = True
     wait_time = between(1, 15)
     host = os.environ.get("LOOKERSDK_BASE_URL")
