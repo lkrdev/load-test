@@ -102,6 +102,8 @@ def load_env(
     ]
     if json_log:
         processors.append(structlog.processors.JSONRenderer())
+    else:
+        processors.append(structlog.dev.ConsoleRenderer())
 
     log_level = os.environ.get("LOG_LEVEL", "INFO").upper()
     if log_level not in ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL"]:
@@ -366,6 +368,7 @@ def load_test(
     from locust import events
     from locust.env import Environment
 
+    
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
