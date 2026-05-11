@@ -1,5 +1,5 @@
 import os
-import random
+import concurrent.futures
 import time
 from typing import List
 from uuid import uuid4
@@ -100,10 +100,9 @@ class DashboardQueriesUser(User):
     def on_start(self):
         if self.sticky_sessions:
             self.sdk = self._init_sdk()
-            self.queries = self._get_queries_from_dashboards(self.sdk)
 
     @task
-    def run_dashboard_query(self):
+    def run_dashboard_queries(self):
         task_id = str(uuid4())
         db_display = ",".join(self.dashboard_ids) if self.dashboard_ids else "unknown"
         
@@ -120,66 +119,89 @@ class DashboardQueriesUser(User):
             try:
                 sdk = self._init_sdk()
                 event_logger.log_event("sdk_initialized")
-                queries = self._get_queries_from_dashboards(sdk)
-                event_logger.log_event("metadata_fetched", query_count=len(queries))
             except Exception as e:
                 event_logger.log_event("sdk_init_error", error=str(e))
                 return
         else:
             sdk = self.sdk
-            queries = self.queries
+
+        queries = self._get_queries_from_dashboards(sdk)
+        event_logger.log_event("metadata_fetched", query_count=len(queries))
             
         if not queries:
             event_logger.log_event("no_queries_found")
             return
             
-        query = random.choice(queries)
-        event_logger.log_event("query_selected", query_id=query)
+        event_logger.log_event("queries_selected", query_ids=queries)
         
         start_time = now()
+
+        query_tasks = []
         
         try:
             if self.query_async:
-                event_logger.log_event("run_query_async_start", query_id=query)
-                
-                if hasattr(models40, "ResultFormat"):
+                event_logger.log_event("run_query_async_start", query_count=len(queries))
+                for query in queries:
                     try:
-                        result_format = models40.ResultFormat(self.result_format)
-                    except Exception:
-                        raise Exception(f"Invalid result_format: {self.result_format}")
-                else:
-                    raise Exception("models40.ResultFormat not available")
-                    
-                query_task = sdk.create_query_task(
-                    models40.WriteCreateQueryTask(
-                        query_id=int(query),
-                        result_format=result_format,
-                    ),
-                    cache=False,
-                )
+                        query_task = sdk.create_query_task(
+                            models40.WriteCreateQueryTask(
+                                query_id=query,
+                                result_format=self.result_format,
+                            ),
+                            cache=False,
+                        )
+                        if not query_task or not getattr(query_task, "id", None):
+                            raise ValueError(f"Failed to create query task: {query}")
+                        
+                        query_tasks.append(query_task)
+                        event_logger.log_event("query_task_created", task_id=query_task.id)
+                            
+                    except Exception as e:
+                        event_logger.log_event("query_task_failed", query_id=query, error=str(e))
                 
-                if not query_task or not getattr(query_task, "id", None):
-                    raise Exception("Failed to create query task")
-                    
-                event_logger.log_event("query_task_created", task_id=query_task.id)
-                
+                remaining_tasks = list(query_tasks)
                 for _ in range(self.async_bail_out):
-                    status = sdk.query_task_results(query_task.id)
-                    if isinstance(status, dict):
-                        if "rows" in status:
-                            break
-                        errors = status.get("errors")
-                        if errors is not None:
-                            raise Exception(str(errors))
-                    elif hasattr(status, "status") and status.status == "complete":
+                    if not remaining_tasks:
                         break
-                    time.sleep(1)
                     
-                event_logger.log_event("run_query_async_complete", query_id=query)
+                    completed_tasks = []
+                    for qt in remaining_tasks:
+                        status = sdk.query_task_results(qt.id)
+                        event_logger.log_event("query_task_checked", task_id=qt.id, status=str(status))
+                        
+                        if isinstance(status, dict):
+                            if "rows" in status:
+                                completed_tasks.append(qt)
+                                event_logger.log_event("run_query_async_complete", task_id=qt.id)
+                            errors = status.get("errors")
+                            if errors is not None:
+                                event_logger.log_event("query_task_run_error", task_id=qt.id, errors=errors)
+                                completed_tasks.append(qt)
+                        elif hasattr(status, "status") and status.status == "complete":
+                            completed_tasks.append(qt)
+                            
+                    for qt in completed_tasks:
+                        remaining_tasks.remove(qt)
+                        
+                    if remaining_tasks:
+                        time.sleep(1)
+                
             else:
-                event_logger.log_event("run_query_sync_start", query_id=query)
-                sdk.run_query(query, result_format=self.result_format, cache=False)
-                event_logger.log_event("run_query_sync_complete", query_id=query)
+                event_logger.log_event("run_queries_start", query_count=len(queries))
+                
+                def _run_single_query(q):
+                    try:
+                        event_logger.log_event("run_query_start", query_id=q)
+                        sdk.run_query(q, result_format=self.result_format, cache=False)
+                        event_logger.log_event("run_query_complete", query_id=q)
+                    except Exception as e:
+                        event_logger.log_event("run_query_error", query_id=q, error=str(e))
+
+                max_workers = min(20, len(queries))
+                with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    executor.map(_run_single_query, queries)
+                    
+                event_logger.log_event("run_query_parallel_complete")
                 
         except Exception as e:
             event_logger.log_event("query_error", error=str(e))
