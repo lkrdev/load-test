@@ -82,11 +82,21 @@ class DashboardQueriesUser(User):
         queries = set()
         for db_id in self.dashboard_ids:
             try:
-                dashboard = sdk.dashboard(db_id)
+                dashboard = sdk.dashboard(db_id)             
                 if dashboard.dashboard_elements:
                     for element in dashboard.dashboard_elements:
                         if element.query_id:
                             queries.add(str(element.query_id))
+                        elif element.result_maker:
+                            if element.result_maker.query_id:
+                                queries.add(str(element.result_maker.query_id))
+                            elif element.result_maker.query.id:
+                                queries.add(str(element.result_maker.query.id))
+                        elif element.look:
+                            if element.look.query_id:
+                                queries.add(str(element.look.query_id))
+                            elif element.look.query.id:
+                                queries.add(str(element.look.query.id))
                         elif element.merge_result_id:
                             merge_query = sdk.merge_query(element.merge_result_id)
                             if merge_query.source_queries:
