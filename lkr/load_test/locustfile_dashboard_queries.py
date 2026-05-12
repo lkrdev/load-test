@@ -85,23 +85,23 @@ class DashboardQueriesUser(User):
                 dashboard = sdk.dashboard(db_id)             
                 if dashboard.dashboard_elements:
                     for element in dashboard.dashboard_elements:
-                        if element.query_id:
+                        if hasattr(element, "query_id") and element.query_id:
                             queries.add(str(element.query_id))
-                        elif element.result_maker:
-                            if element.result_maker.query_id:
+                        elif hasattr(element, "result_maker") and element.result_maker:
+                            if hasattr(element.result_maker, "query_id") and element.result_maker.query_id:
                                 queries.add(str(element.result_maker.query_id))
-                            elif element.result_maker.query.id:
+                            elif hasattr(element.result_maker, "query") and element.result_maker.query and element.result_maker.query.id:
                                 queries.add(str(element.result_maker.query.id))
-                        elif element.look:
-                            if element.look.query_id:
+                        elif hasattr(element, "look") and element.look:
+                            if hasattr(element.look, "query_id") and element.look.query_id:
                                 queries.add(str(element.look.query_id))
-                            elif element.look.query.id:
+                            elif hasattr(element.look, "query") and element.look.query and element.look.query.id:
                                 queries.add(str(element.look.query.id))
-                        elif element.merge_result_id:
+                        elif hasattr(element, "merge_result_id") and element.merge_result_id:
                             merge_query = sdk.merge_query(element.merge_result_id)
                             if merge_query.source_queries:
                                 for q in merge_query.source_queries:
-                                    if q and q.query_id:
+                                    if q and hasattr(q, "query_id") and q.query_id:
                                         queries.add(str(q.query_id))
             except Exception as e:
                 logger.error("Failed to get dashboard metadata", dashboard_id=db_id, error=str(e))
