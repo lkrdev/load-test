@@ -39,3 +39,6 @@ dev = [
 
 [project.scripts]
 lkr = "lkr.main:app"
+
+[tool.setuptools.packages.find]
+include = ["lkr*"]

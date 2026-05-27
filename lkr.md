@@ -32,6 +32,7 @@ $ lkr load-test [OPTIONS] COMMAND [ARGS]...
 
 **Options**:
 
+* `-v, --version`: Show the version and exit.
 * `--help`: Show this message and exit.
 
 **Commands**:
@@ -111,6 +112,7 @@ $ lkr load-test dashboard [OPTIONS]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
 * `--attribute TEXT`: Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value. Excepts multiple arguments --attribute store:acme --attribute team:managers. Accepts random.randint(0,1000) format
 * `--stop-timeout INTEGER`: How many seconds to wait for the load test to stop  [default: 15]
+* `--additional-dashboard TEXT`: Additional dashboard IDs to load in separate tabs. Specify multiple dashboards as --additional-dashboard abc --additional-dashboard 123
 * `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--help`: Show this message and exit.
 

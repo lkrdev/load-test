@@ -29,6 +29,12 @@ from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedD
 from lkr.load_test.locustfile_dashboard_queries import DashboardQueriesUser
 from lkr.load_test.utils import get_external_group_id
 from lkr.utils.validate_api import validate_api_credentials
+from lkr.utils.version import get_version
+
+def version_callback(value: bool):
+    if value:
+        typer.echo(get_version())
+        raise typer.Exit()
 
 app = typer.Typer(name="lkr", no_args_is_help=True)
 group = typer.Typer(name="load-test", no_args_is_help=True)
@@ -126,6 +132,16 @@ def load_env(
 @group.callback()
 def check_settings(
     ctx: typer.Context,
+    version: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--version",
+            "-v",
+            callback=version_callback,
+            is_eager=True,
+            help="Show the version and exit.",
+        ),
+    ] = None,
 ):
     if not ctx.invoked_subcommand:
         return
@@ -355,6 +371,13 @@ def load_test(
             help="How many seconds to wait for the load test to stop",
         ),
     ] = 15,
+    additional_dashboard: Annotated[
+        List[str],
+        typer.Option(
+            "--additional-dashboard",
+            help="Additional dashboard IDs to load in separate tabs. Specify multiple dashboards as --additional-dashboard abc --additional-dashboard 123"
+        ),
+    ] = [],
     first_name: Annotated[
         str,
         typer.Option(
@@ -380,6 +403,7 @@ def load_test(
             super().__init__(*args, **kwargs)
             self.attributes = attribute or []
             self.dashboard = dashboard
+            self.additional_dashboards = additional_dashboard or []
             self.models = model
             self.group_ids = group or []
             self.external_group_id = get_external_group_id(
