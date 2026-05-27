@@ -34,6 +34,8 @@ class DashboardUser(User):
         self.group_ids: List[str] = []
         self.external_group_id: str | None = None
         self.dashboard: str = ""
+        self.additional_dashboards: List[str] = []
+        self.first_name: str = "Embed"
         self.models: List[str] = []
         chrome_options = Options()
         chrome_options.add_argument("--headless=new")
@@ -51,13 +53,9 @@ class DashboardUser(User):
 
         self.driver = webdriver.Chrome(options=chrome_options)
 
-    def on_start(self):
-        # Initialize the SDK - make sure to set your environment variables
-        if "LOOKERSDK_TIMEOUT" not in os.environ:
-            os.environ["LOOKERSDK_TIMEOUT"] = "10"
-        self.sdk = looker_sdk.init40()
-        attributes = format_attributes(self.attributes)
-
+    def get_sso_url(self, dashboard_id: str, attributes: dict[str, str]) -> str:
+        if not self.sdk:
+            raise RuntimeError("Looker SDK is not initialized.")
         sso_url = self.sdk.create_sso_embed_url(
             models40.EmbedSsoParams(
                 first_name=self.first_name,
@@ -65,7 +63,7 @@ class DashboardUser(User):
                 external_user_id=self.user_id,
                 external_group_id=self.external_group_id,
                 session_length=MAX_SESSION_LENGTH,  # max seconds
-                target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{self.dashboard}",
+                target_url=f"{os.environ.get('LOOKERSDK_BASE_URL')}/embed/dashboards/{dashboard_id}",
                 permissions=PERMISSIONS,
                 models=self.models,
                 user_attributes=attributes,
@@ -73,9 +71,26 @@ class DashboardUser(User):
             )
         )
         if sso_url and sso_url.url:
-            self.driver.get(sso_url.url)
+            return sso_url.url
         else:
-            raise Exception("Failed to get sso url")
+            raise Exception(f"Failed to get sso url for dashboard {dashboard_id}")
+
+    def on_start(self):
+        # Initialize the SDK - make sure to set your environment variables
+        if "LOOKERSDK_TIMEOUT" not in os.environ:
+            os.environ["LOOKERSDK_TIMEOUT"] = "10"
+        self.sdk = looker_sdk.init40()
+        attributes = format_attributes(self.attributes)
+
+        main_url = self.get_sso_url(self.dashboard, attributes)
+        self.driver.get(main_url)
+
+        main_window = self.driver.current_window_handle
+        for add_db in self.additional_dashboards:
+            add_url = self.get_sso_url(add_db, attributes)
+            self.driver.switch_to.new_window("tab")
+            self.driver.get(add_url)
+        self.driver.switch_to.window(main_window)
 
     # TODO: Causing greenlet issues
     # def on_stop(self):
