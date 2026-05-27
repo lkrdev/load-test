@@ -35,6 +35,7 @@ class DashboardUser(User):
         self.external_group_id: str | None = None
         self.dashboard: str = ""
         self.additional_dashboards: List[str] = []
+        self.first_name: str = "Embed"
         self.models: List[str] = []
         chrome_options = Options()
         chrome_options.add_argument("--headless=new")
@@ -53,6 +54,8 @@ class DashboardUser(User):
         self.driver = webdriver.Chrome(options=chrome_options)
 
     def get_sso_url(self, dashboard_id: str, attributes: dict[str, str]) -> str:
+        if not self.sdk:
+            raise RuntimeError("Looker SDK is not initialized.")
         sso_url = self.sdk.create_sso_embed_url(
             models40.EmbedSsoParams(
                 first_name=self.first_name,
@@ -82,9 +85,12 @@ class DashboardUser(User):
         main_url = self.get_sso_url(self.dashboard, attributes)
         self.driver.get(main_url)
 
+        main_window = self.driver.current_window_handle
         for add_db in self.additional_dashboards:
             add_url = self.get_sso_url(add_db, attributes)
-            self.driver.execute_script("window.open(arguments[0], '_blank');", add_url)
+            self.driver.switch_to.new_window("tab")
+            self.driver.get(add_url)
+        self.driver.switch_to.window(main_window)
 
     # TODO: Causing greenlet issues
     # def on_stop(self):
