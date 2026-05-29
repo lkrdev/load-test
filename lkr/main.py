@@ -398,7 +398,7 @@ def load_test(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
-    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard] + additional_dashboard)
+    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard] + (additional_dashboard or []))
     if explore_url:
         typer.echo(f"\nTrack query history for the dashboard load test here:\n{explore_url}\n")
 

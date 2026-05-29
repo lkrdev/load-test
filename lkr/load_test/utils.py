@@ -118,7 +118,9 @@ def extract_looker_user_id_from_token(
         return None
 
 
-def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, dashboard_ids: List[str] = []) -> str | None:
+def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, dashboard_ids: List[str] | None = None) -> str | None:
+    if dashboard_ids is None:
+        dashboard_ids = []
     base_url = os.environ.get("LOOKERSDK_BASE_URL", "")
     if not base_url:
         return None
