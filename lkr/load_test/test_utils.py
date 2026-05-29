@@ -2,6 +2,7 @@ from lkr.load_test.utils import (
     check_random_int_format,
     format_attributes,
     get_user_id,
+    get_dashboard_load_test_system_activity_explore_url,
 )
 
 
@@ -73,3 +74,90 @@ def test_get_user_id():
     # Test uniqueness
     user_ids = [get_user_id() for _ in range(100)]
     assert len(set(user_ids)) == 100  # All IDs should be unique
+
+
+def test_get_dashboard_load_test_system_activity_explore_url(monkeypatch):
+    # Mock environment variable
+    monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
+
+    from urllib.parse import urlparse, parse_qs
+    import json
+
+    url = get_dashboard_load_test_system_activity_explore_url(5)
+    assert url is not None
+
+    parsed = urlparse(url)
+    assert parsed.scheme == "https"
+    assert parsed.netloc == "myinstance.looker.com"
+    assert parsed.path == "/explore/system__activity/history"
+
+    query_params = parse_qs(parsed.query)
+    assert query_params["fields"] == ["history.created_minute,history.query_run_count,user.count"]
+    assert "pivots" not in query_params
+    assert query_params["fill_fields"] == ["history.created_minute"]
+    assert query_params["sorts"] == ["history.created_minute"]
+    assert query_params["limit"] == ["500"]
+    assert query_params["column_limit"] == ["50"]
+
+    # Check that the filter string is format "YYYY/MM/DD HH:MM to YYYY/MM/DD HH:MM"
+    created_minute_filter = query_params["f[history.created_minute]"][0]
+    import re
+    assert re.match(r"^\d{4}/\d{2}/\d{2} \d{2}:\d{2} to \d{4}/\d{2}/\d{2} \d{2}:\d{2}$", created_minute_filter)
+
+    # Check that filter_config JSON is valid
+    filter_config = json.loads(query_params["filter_config"][0])
+    assert "history.created_minute" in filter_config
+    filters = filter_config["history.created_minute"]
+    assert len(filters) == 1
+    assert filters[0]["type"] == "between"
+    assert filters[0]["id"] == 1
+    assert "date" in filters[0]["values"][0]
+    assert "date" in filters[0]["values"][1]
+    assert filters[0]["values"][0]["tz"] is True
+    assert filters[0]["values"][1]["tz"] is True
+    assert "f[history.real_dash_id]" not in query_params
+
+
+def test_get_dashboard_load_test_system_activity_explore_url_single_dashboard(monkeypatch):
+    monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
+
+    from urllib.parse import urlparse, parse_qs
+
+    url = get_dashboard_load_test_system_activity_explore_url(5, ["1"])
+    assert url is not None
+
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+    assert query_params["fields"] == ["history.created_minute,history.query_run_count,user.count"]
+    assert "pivots" not in query_params
+    assert query_params["f[history.real_dash_id]"] == ["1"]
+
+
+def test_get_dashboard_load_test_system_activity_explore_url_with_dashboards(monkeypatch):
+    # Mock environment variable
+    monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
+
+    from urllib.parse import urlparse, parse_qs
+    import json
+
+    url = get_dashboard_load_test_system_activity_explore_url(5, ["1", "2", "3"])
+    assert url is not None
+
+    parsed = urlparse(url)
+    assert parsed.scheme == "https"
+    assert parsed.netloc == "myinstance.looker.com"
+    assert parsed.path == "/explore/system__activity/history"
+
+    query_params = parse_qs(parsed.query)
+    assert query_params["fields"] == ["history.created_minute,history.query_run_count,user.count,dashboard.title"]
+    assert query_params["pivots"] == ["dashboard.title"]
+    assert query_params["f[history.real_dash_id]"] == ["1,2,3"]
+
+    # Check that filter_config JSON is valid and has history.real_dash_id
+    filter_config = json.loads(query_params["filter_config"][0])
+    assert "history.real_dash_id" in filter_config
+    filters = filter_config["history.real_dash_id"]
+    assert len(filters) == 1
+    assert filters[0]["type"] == "="
+    assert filters[0]["id"] == 2
+    assert filters[0]["values"][0]["constant"] == "1,2,3"
