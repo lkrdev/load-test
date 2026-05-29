@@ -3,7 +3,8 @@ import base64
 import json
 import random
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from urllib.parse import urlencode, urlparse
 from typing import Dict, List, Tuple
 
 import structlog
@@ -115,3 +116,71 @@ def extract_looker_user_id_from_token(
     except Exception as e:
         logger.error("Failed to extract looker user id from token", error=e)
         return None
+
+
+def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, dashboard_ids: List[str] = []) -> str | None:
+    base_url = os.environ.get("LOOKERSDK_BASE_URL", "")
+    if not base_url:
+        return None
+    hostname = urlparse(base_url).hostname
+    if not hostname:
+        return None
+
+    now_utc = datetime.now(timezone.utc)
+    start_time = now_utc - timedelta(minutes=1)
+    end_time = now_utc + timedelta(minutes=run_time_minutes + 2)
+
+    start_str = start_time.strftime("%Y/%m/%d %H:%M")
+    end_str = end_time.strftime("%Y/%m/%d %H:%M")
+
+    start_iso = start_time.strftime("%Y-%m-%dT%H:%M:00.000Z")
+    end_iso = end_time.strftime("%Y-%m-%dT%H:%M:00.000Z")
+
+    filter_config = {
+        "history.created_minute": [
+            {
+                "type": "between",
+                "values": [
+                    {"date": start_iso, "tz": True},
+                    {"date": end_iso, "tz": True}
+                ],
+                "id": 1
+            }
+        ]
+    }
+
+    fields_str = "history.created_minute,history.query_run_count,user.count"
+    pivots_str = None
+    if len(dashboard_ids) > 1:
+        fields_str += ",dashboard.title"
+        pivots_str = "dashboard.title"
+
+    query_params = {
+        "fields": fields_str,
+        "fill_fields": "history.created_minute",
+        "f[history.created_minute]": f"{start_str} to {end_str}",
+        "sorts": "history.created_minute",
+        "limit": "500",
+        "column_limit": "50",
+    }
+
+    if pivots_str is not None:
+        query_params["pivots"] = pivots_str
+
+    if dashboard_ids:
+        dashboards_str = ",".join(dashboard_ids)
+        query_params["f[history.real_dash_id]"] = dashboards_str
+        filter_config["history.real_dash_id"] = [
+            {
+                "type": "=",
+                "values": [
+                    {"constant": dashboards_str},
+                    {}
+                ],
+                "id": 2
+            }
+        ]
+
+    query_params["filter_config"] = json.dumps(filter_config, separators=(',', ':'))
+
+    return f"https://{hostname}/explore/system__activity/history?{urlencode(query_params)}"

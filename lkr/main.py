@@ -27,7 +27,7 @@ from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
 from lkr.load_test.locustfile_dashboard_queries import DashboardQueriesUser
-from lkr.load_test.utils import get_external_group_id
+from lkr.load_test.utils import get_external_group_id, get_dashboard_load_test_system_activity_explore_url
 from lkr.utils.validate_api import validate_api_credentials
 from lkr.utils.version import get_version
 
@@ -291,6 +291,9 @@ def load_test_cookieless_embed_dashboard(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
+    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard])
+    if explore_url:
+        typer.echo(f"\nTrack query history for the dashboard load test here:\n{explore_url}\n")
 
     class CookielessEmbedDashboardUserClass(CookielessEmbedDashboardUser):
         def __init__(self, *args, **kwargs):
@@ -395,6 +398,9 @@ def load_test(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
+    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard] + additional_dashboard)
+    if explore_url:
+        typer.echo(f"\nTrack query history for the dashboard load test here:\n{explore_url}\n")
 
     # Process attributes into the expected format
 
