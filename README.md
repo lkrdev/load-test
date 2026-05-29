@@ -104,8 +104,7 @@ Add `SE_OFFLINE=false` to the `--set-env-vars` flag:
 ### Example Deploy with Cloud Run Job
 
 This is an example job to run a load test on a dashboard with 200 users for 10 minutes for dashboard id 1.  Note that the dashboard has [Auto Refresh](https://cloud.google.com/looker/docs/editing-user-defined-dashboards#autorefresh) enabled. If you do not have auto refresh enabled, then the user will load the dashboard and just sit there without running more queries. Cloud Run Jobs let you manage multiple concurrent jobs and scale them up and down as needed with --tasks; this is the fastest easiest way to run a large scale load test.
-
-```
+```bash
 gcloud run jobs create lkr-load-test-dashboard \
     --project=looker-load-tests \
     --region=us-central1 \
@@ -121,6 +120,8 @@ gcloud run jobs create lkr-load-test-dashboard \
     --command="lkr" \
     --args="load-test","dashboard","--dashboard=1","--users=20","--run-time=10","--model=thelook" 
 ```
+
+
 
 > Note: Escaping special characters in the command line is a pain.  You can use a custom delimited in the `--args` argument to pass the arguments as a string. E.g. using the + as a delimiter: `--args=^+^"load-test"+"dashboard"+"--dashboard=YOUR_DASHBOARD_ID"+"--users=2"+"--run-time=5"+"--model=YOUR_LOOKML_MODEL"+"--spawn-rate=.1"+"--attribute=store:random.randint(0,7000)"`
 
