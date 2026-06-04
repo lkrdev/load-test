@@ -38,16 +38,18 @@ class DashboardUser(User):
         self.first_name: str = "Embed"
         self.models: List[str] = []
         chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Required for server environments
-        chrome_options.add_argument("--no-sandbox") # Bypass OS security model
-        chrome_options.add_argument("--disable-dev-shm-usage") # Overcome limited resource problems
+        chrome_options.add_argument("--headless=new")          # Prefer modern headless implementation
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--remote-debugging-pipe") # CRITICAL: Completely bypasses DevToolsActivePort files via direct POSIX pipes
 
         # Fail fast in restricted network environments (VPCSC)
         chrome_options.page_load_strategy = "eager"
         looker_url = os.environ.get("LOOKERSDK_BASE_URL", "")
         looker_host = urlparse(looker_url).hostname
         
-        rules = "MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1"
+        # Include IPv6 loopback (::1) to protect local ChromeDriver IPC handshakes
+        rules = "MAP * ~NOTFOUND, EXCLUDE localhost, EXCLUDE 127.0.0.1, EXCLUDE ::1"
         if looker_host:
             rules += f", EXCLUDE {looker_host}"
         chrome_options.add_argument(f"--host-resolver-rules={rules}")
