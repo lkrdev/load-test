@@ -106,7 +106,8 @@ def extract_looker_user_id_from_token(
         return None
     try:
         payload = response.authentication_token.split(".")[1]
-        payload_bytes = base64.b64decode(payload)
+        payload += "=" * ((4 - len(payload) % 4) % 4)
+        payload_bytes = base64.urlsafe_b64decode(payload)
         payload_json = json.loads(payload_bytes)
         credentials = json.loads(payload_json.get("credentials"))
         if not credentials:
