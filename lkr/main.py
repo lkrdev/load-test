@@ -26,6 +26,8 @@ from lkr.load_test.locustfile_dashboard import DashboardUser
 from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
+from lkr.load_test.locustfile_cookieless_embed_conversational_analytics import CookielessEmbedConversationalAnalyticsUser
+from lkr.load_test.locustfile_conversational_analytics_api import ConversationalAnalyticsApiUser
 from lkr.load_test.locustfile_dashboard_queries import DashboardQueriesUser
 from lkr.load_test.utils import get_external_group_id, get_dashboard_load_test_system_activity_explore_url
 from lkr.utils.validate_api import validate_api_credentials
@@ -52,6 +54,8 @@ class LoadTestType(str, Enum):
     render = "render"
     cookieless_embed = "cookieless-embed"
     cookieless_embed_dashboard = "cookieless-embed-dashboard"
+    cookieless_embed_conversational_analytics = "cookieless-embed-conversational-analytics"
+    conversational_analytics_api = "conversational-analytics-api"
 
 
 class DebugType(str, Enum):
@@ -153,6 +157,8 @@ def check_settings(
         "embed-observability",
         "cookieless-embed",
         "cookieless-embed-dashboard",
+        "cookieless-embed-conversational-analytics",
+        "conversational-analytics-api",
         "dashboard-queries",
     ]:
         sdk = looker_sdk.init40()
@@ -175,7 +181,7 @@ def check_settings(
             )
             raise typer.Exit(1)
 
-        if ctx.invoked_subcommand in ["query", "render", "cookieless-embed", "cookieless-embed-dashboard", "dashboard-queries"]:
+        if ctx.invoked_subcommand in ["query", "render", "cookieless-embed", "cookieless-embed-dashboard", "cookieless-embed-conversational-analytics", "conversational-analytics-api", "dashboard-queries"]:
             # check for embed cookieless v2
             if not setting.embed_cookieless_v2:
                 typer.echo(
@@ -324,6 +330,234 @@ def load_test_cookieless_embed_dashboard(
     if runner.spawning_greenlet:
         runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
     runner.greenlet.join()
+
+
+@group.command(name="cookieless-embed-conversational-analytics")
+def load_test_cookieless_embed_conversational_analytics(
+    agent_id: str = typer.Option(
+        help="Agent ID to run the test on",
+        default="",
+    ),
+    conversation_id: str = typer.Option(
+        help="Conversation ID to run the test on",
+        default="",
+    ),
+    model: list[str] = typer.Option(
+        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
+        default=...,
+    ),
+    attribute: Annotated[
+        List[str] | None,
+        typer.Option(
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value."
+        ),
+    ] = None,
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user."
+        ),    ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
+    users: Annotated[
+        int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
+    ] = 25,
+    spawn_rate: Annotated[
+        float,
+        typer.Option(help="Number of users to spawn per second", min=0, max=100),
+    ] = 1,
+    run_time: Annotated[
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
+    ] = 5,
+    stop_timeout: Annotated[
+        int,
+        typer.Option(
+            help="How many seconds to wait for the load test to stop",
+        ),
+    ] = 15,
+    debug: Annotated[
+        bool,
+        typer.Option(
+            "--debug",
+            help="Enable debug mode",
+        ),
+    ] = False,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
+):
+    """
+    Run a load test on Conversational Analytics using Cookieless Embed V2.
+    """
+    from locust import events
+    from locust.env import Environment
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+
+    class CookielessEmbedConversationalAnalyticsUserClass(CookielessEmbedConversationalAnalyticsUser):
+        def __init__(self, *args, **kwargs):
+            self.debug = debug
+            self.agent_id = agent_id
+            self.conversation_id = conversation_id
+            self.models = model
+            self.attributes = attribute or []
+            self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
+            self.first_name = first_name
+            super().__init__(*args, **kwargs)
+
+    env = Environment(
+        user_classes=[CookielessEmbedConversationalAnalyticsUserClass], events=events, stop_timeout=stop_timeout
+    )
+    runner = env.create_local_runner()
+
+    runner.start(user_count=users, spawn_rate=spawn_rate)
+
+    def quit_runner():
+        runner.stop()
+        if runner.greenlet:
+            runner.greenlet.kill(block=False)
+        typer.Exit(1)
+
+    if runner.spawning_greenlet:
+        runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
+    runner.greenlet.join()
+
+
+@group.command(name="conversational-analytics-api")
+def load_test_conversational_analytics_api(
+    agent_id: str = typer.Option(
+        help="Target with an agent id",
+        default="",
+    ),
+    agent_prompt: str = typer.Option(
+        help="Give it an agent prompt and it creates a new one",
+        default="",
+    ),
+    model: list[str] = typer.Option(
+        help="Model to run the test on. Specify multiple models as --model model1 --model model2",
+        default=...,
+    ),
+    explore: list[str] = typer.Option(
+        help="Explores to include if agent doesn't exist yet. Specify multiple as --explore exp1 --explore exp2",
+        default=[],
+    ),
+    question: list[str] = typer.Option(
+        help="Questions to ask the agent. Specify multiple as --question 'q1' --question 'q2'",
+        default=["What are the top 5 products by sales?"],
+    ),
+    continue_conversation: Annotated[
+        bool,
+        typer.Option(
+            help="Leaves conversation open and sends more chats",
+        ),
+    ] = False,
+    attribute: Annotated[
+        List[str] | None,
+        typer.Option(
+            help="Looker attributes to run the test on. Specify them as attribute:value like --attribute store:value."
+        ),
+    ] = None,
+    group: Annotated[
+        List[str],
+        typer.Option(
+            help="Looker group IDs to add to the user."
+        ),    ] = [],
+    external_group_id: Annotated[
+        str | None,
+        typer.Option(
+            help="External group ID to add to the user. Will be prefixed with embed unless overridden with --external-group-id-prefix"
+        ),
+    ] = None,
+    external_group_id_prefix: Annotated[
+        str | None,
+        typer.Option(
+            help="Prefix to add to the group IDs. Defaults to `embed`. To remove the prefix, pass in an empty string"
+        ),
+    ] = "embed",
+    users: Annotated[
+        int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
+    ] = 25,
+    spawn_rate: Annotated[
+        float,
+        typer.Option(help="Number of users to spawn per second", min=0, max=100),
+    ] = 1,
+    run_time: Annotated[
+        int, typer.Option(help="How many minutes to run the load test for", min=1)
+    ] = 5,
+    stop_timeout: Annotated[
+        int,
+        typer.Option(
+            help="How many seconds to wait for the load test to stop",
+        ),
+    ] = 15,
+    first_name: Annotated[
+        str,
+        typer.Option(
+            help="First name of the embed user",
+        ),
+    ] = "Embed",
+):
+    """
+    Run a load test on Conversational Analytics using the Looker API.
+    """
+    from locust import events
+    from locust.env import Environment
+
+    typer.echo(
+        f"Running API load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+
+    class ConversationalAnalyticsApiUserClass(ConversationalAnalyticsApiUser):
+        def __init__(self, *args, **kwargs):
+            self.agent_id = agent_id
+            self.agent_prompt = agent_prompt
+            self.models = model
+            self.explores = explore
+            self.questions = question
+            self.continue_conversation = continue_conversation
+            self.attributes = attribute or []
+            self.group_ids = group or []
+            self.external_group_id = get_external_group_id(
+                external_group_id, external_group_id_prefix
+            )
+            self.first_name = first_name
+            super().__init__(*args, **kwargs)
+
+    env = Environment(
+        user_classes=[ConversationalAnalyticsApiUserClass], events=events, stop_timeout=stop_timeout
+    )
+    runner = env.create_local_runner()
+
+    runner.start(user_count=users, spawn_rate=spawn_rate)
+
+    def quit_runner():
+        runner.stop()
+        if runner.greenlet:
+            runner.greenlet.kill(block=False)
+        typer.Exit(1)
+
+    if runner.spawning_greenlet:
+        runner.spawning_greenlet.spawn_later(run_time * 60, quit_runner)
+    runner.greenlet.join()
+
 
 @group.command(name="dashboard")
 def load_test(
