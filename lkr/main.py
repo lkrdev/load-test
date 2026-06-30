@@ -439,7 +439,9 @@ def load_test(
 def load_test_query(
     query: Annotated[
         List[str],
-        typer.Option(help="Query ID (from explore url) to run the test on"),
+        typer.Option(
+            help="Query ID (from explore url) to run the test on. Specify multiple queries as --query query1 --query query2"
+        ),
     ],
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
