@@ -128,7 +128,7 @@ $ lkr load-test query [OPTIONS]
 
 **Options**:
 
-* `--query TEXT`: Query ID (from explore url) to run the test on  [required]
+* `--query TEXT`: Query ID (from explore url) to run the test on. Specify multiple queries as --query query1 --query query2  [required]
 * `--users INTEGER RANGE`: Number of users to run the test with  [default: 25; 1&lt;=x&lt;=1000]
 * `--spawn-rate FLOAT RANGE`: Number of users to spawn per second  [default: 1; 0&lt;=x&lt;=100]
 * `--run-time INTEGER RANGE`: How many minutes to run the load test for  [default: 5; x&gt;=1]
@@ -143,6 +143,7 @@ $ lkr load-test query [OPTIONS]
 * `--query-async / --no-query-async`: Run the query asynchronously  [default: no-query-async]
 * `--async-bail-out INTEGER`: How many iterations to wait for the async query to complete (roughly number of seconds)  [default: 120]
 * `--first-name TEXT`: First name of the embed user  [default: Embed]
+* `--max-queries-per-task INTEGER RANGE`: Maximum number of unique queries to execute per task iteration  [default: 1; x&gt;=1]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test dashboard-queries`

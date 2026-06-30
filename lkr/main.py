@@ -439,7 +439,9 @@ def load_test(
 def load_test_query(
     query: Annotated[
         List[str],
-        typer.Option(help="Query ID (from explore url) to run the test on"),
+        typer.Option(
+            help="Query ID (from explore url) to run the test on. Specify multiple queries as --query query1 --query query2"
+        ),
     ],
     users: Annotated[
         int, typer.Option(help="Number of users to run the test with", min=1, max=1000)
@@ -516,6 +518,13 @@ def load_test_query(
             help="First name of the embed user",
         ),
     ] = "Embed",
+    max_queries_per_task: Annotated[
+        int,
+        typer.Option(
+            help="Maximum number of unique queries to execute per task iteration",
+            min=1,
+        ),
+    ] = 1,
 ):
     """
     Run a load test by executing specific queries by ID.
@@ -542,6 +551,7 @@ def load_test_query(
             self.external_group_id = get_external_group_id(
                 external_group_id, external_group_id_prefix
             )
+            self.max_queries_per_task = max_queries_per_task
             self.first_name = first_name
 
     from locust import events
