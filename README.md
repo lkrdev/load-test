@@ -62,6 +62,9 @@ uv run --env-file=.env lkr load-test debug looker
 # Run a load test on a query with auto refresh
 uv run lkr load-test query --query=BLYyJ70e7HCeBQJrxXanHi --users=1 --run-time=5 --model=thelook --attribute "store:random.randint(1,7000)" --query-async
 
+# Run a load test on multiple queries, running a max of 2 queries per task iteration randomly selected
+uv run lkr load-test query --query=BLYyJ70e7HCeBQJrxXanHi --query=ANOTHER_QUERY_ID --query=A_THIRD_QUERY --max-queries-per-task=2 --users=1 --run-time=5 --model=thelook --attribute "store:random.randint(1,7000)" --query-async
+
 # Run a load test on queries extracted from a dashboard
 uv run lkr load-test dashboard-queries --dashboard=1 --users=5 --run-time=5 --attribute "store:random.randint(1,7000)" --model=thelook
 

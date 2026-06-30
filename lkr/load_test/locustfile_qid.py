@@ -94,6 +94,7 @@ class QueryUser(User):
         self.attributes: List[str] = []
         self.async_bail_out: int = 120
         self.sticky_sessions: bool = False
+        self.max_queries_per_task: int = 1
         self.group_ids: List[str] = []
         self.external_group_id: str | None = None
 
@@ -145,53 +146,108 @@ class QueryUser(User):
             ts.init_sdk = datetime.datetime.now()
         else:
             sdk = self.sdk
-        query = random.choice(self.qid)
+        num_queries = min(len(self.qid), self.max_queries_per_task)
+        selected_queries = random.sample(self.qid, num_queries)
 
         if self.query_async:
-            if query not in self.queries:
+            query_tasks = []
+            for query in selected_queries:
+                start_time = time.time()
+                if query not in self.queries:
+                    try:
+                        x = sdk.query_for_slug(query)
+                        self.queries[query] = x
+                        if not ts.lookup_query:
+                            ts.lookup_query = datetime.datetime.now()
+                    except Exception as e:
+                        self.environment.events.request.fire(request_type="query_for_slug", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                        continue
+
+                query_obj = self.queries.get(query)
+                if not query_obj or not query_obj.id:
+                    self.environment.events.request.fire(request_type="lookup_query", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Query object or its id is None for {query}"))
+                    continue
+                # Use the correct ResultFormat enum if available, else raise
+                if hasattr(models40, "ResultFormat"):
+                    try:
+                        result_format = models40.ResultFormat(self.result_format)
+                    except Exception as e:
+                        self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                        continue
+                else:
+                    self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception("models40.ResultFormat not available"))
+                    continue
+
                 try:
-                    x = sdk.query_for_slug(query)
-                    self.queries[query] = x
-                    ts.lookup_query = datetime.datetime.now()
+                    task = sdk.create_query_task(
+                        models40.WriteCreateQueryTask(
+                            query_id=query_obj.id,
+                            result_format=result_format,
+                        ),
+                        cache=False,
+                    )
+                    if not ts.task:
+                        ts.task = datetime.datetime.now()
+                    if (
+                        not task
+                        or not getattr(task, "id", None)
+                        or not isinstance(task.id, str)
+                    ):
+                        self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Query task or its id is None or not a string for {query}"))
+                        continue
+                    query_tasks.append((task.id, start_time))
                 except Exception as e:
-                    print(e)
-            query_obj = self.queries[query]
-            if not query_obj or not query_obj.id:
-                raise Exception("Query object or its id is None")
-            # Use the correct ResultFormat enum if available, else raise
-            if hasattr(models40, "ResultFormat"):
-                try:
-                    result_format = models40.ResultFormat(self.result_format)
-                except Exception:
-                    raise Exception(f"Invalid result_format: {self.result_format}")
-            else:
-                raise Exception("models40.ResultFormat not available")
-            task = sdk.create_query_task(
-                models40.WriteCreateQueryTask(
-                    query_id=query_obj.id,
-                    result_format=result_format,
-                ),
-                cache=False,
-            )
-            ts.task = datetime.datetime.now()
-            if (
-                not task
-                or not getattr(task, "id", None)
-                or not isinstance(task.id, str)
-            ):
-                raise Exception("Query task or its id is None or not a string")
+                    self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+
+            remaining_tasks = list(query_tasks)
             for _i in range(self.async_bail_out):
-                finish_task = sdk.query_task_results(task.id)
-                if isinstance(finish_task, dict):
-                    if "rows" in finish_task:
-                        break
-                    errors = finish_task.get("errors")
-                    if errors is not None:
-                        raise Exception(str(errors))
-                time.sleep(1)
+                if not remaining_tasks:
+                    break
+                completed_tasks = []
+                for task_info in remaining_tasks:
+                    task_id, start_time = task_info
+                    try:
+                        finish_task = sdk.query_task_results(task_id)
+                        if isinstance(finish_task, dict):
+                            if "rows" in finish_task:
+                                completed_tasks.append(task_info)
+                                self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=len(str(finish_task)))
+                            else:
+                                errors = finish_task.get("errors")
+                                if errors is not None:
+                                    completed_tasks.append(task_info)
+                                    self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Error in query task {task_id}: {errors}"))
+                        elif hasattr(finish_task, "status") and finish_task.status == "complete":
+                            completed_tasks.append(task_info)
+                            self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=len(str(finish_task)))
+                    except Exception as e:
+                        completed_tasks.append(task_info)
+                        self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                for task_info in completed_tasks:
+                    remaining_tasks.remove(task_info)
+                if remaining_tasks:
+                    time.sleep(1)
+
+            for task_info in remaining_tasks:
+                task_id, start_time = task_info
+                self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Timeout waiting for async task {task_id} after {self.async_bail_out}s"))
+
             ts.finish_task = datetime.datetime.now()
         else:
-            sdk.run_query(query, result_format=self.result_format, cache=False)
+            def _run_single_query(q):
+                start_time = time.time()
+                try:
+                    res = sdk.run_query(q, result_format=self.result_format, cache=False)
+                    self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
+                except Exception as e:
+                    self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, exception=e)
+
+            import gevent.pool
+            max_workers = max(1, min(20, len(selected_queries)))
+            pool = gevent.pool.Pool(max_workers)
+            for q in selected_queries:
+                pool.spawn(_run_single_query, q)
+            pool.join()
             ts.run_query = datetime.datetime.now()
         ts.end = datetime.datetime.now()
         logger.info(
