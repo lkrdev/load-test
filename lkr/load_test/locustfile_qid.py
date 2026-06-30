@@ -69,7 +69,7 @@ def authenticate(sdk: Looker40SDK, user_id: str):
     if not user or not user.id or not isinstance(user.id, int):
         raise Exception("User not found or id is not an int")
     sdk.auth.login_user(user.id)
-    token = sdk.auth._get_token(transport_options={"timeout": 60 * 5})
+    sdk.auth._get_token(transport_options={"timeout": 60 * 5})
     # Do not call set_token here: _get_token returns AuthToken, but set_token expects AccessToken.
     # This is a no-op to avoid type errors.
 
@@ -97,6 +97,7 @@ class QueryUser(User):
         self.max_queries_per_task: int = 1
         self.group_ids: List[str] = []
         self.external_group_id: str | None = None
+        self.first_name: str = "Embed"
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -234,20 +235,13 @@ class QueryUser(User):
 
             ts.finish_task = datetime.datetime.now()
         else:
-            def _run_single_query(q):
+            for q in selected_queries:
                 start_time = time.time()
                 try:
                     res = sdk.run_query(q, result_format=self.result_format, cache=False)
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
                 except Exception as e:
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, exception=e)
-
-            import gevent.pool
-            max_workers = max(1, min(20, len(selected_queries)))
-            pool = gevent.pool.Pool(max_workers)
-            for q in selected_queries:
-                pool.spawn(_run_single_query, q)
-            pool.join()
             ts.run_query = datetime.datetime.now()
         ts.end = datetime.datetime.now()
         logger.info(
