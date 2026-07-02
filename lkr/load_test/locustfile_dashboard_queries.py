@@ -153,10 +153,11 @@ class DashboardQueriesUser(User):
                 event_logger.log_event("run_query_async_start", query_count=len(queries))
                 for query in queries:
                     try:
+                        res_fmt = models40.ResultFormat(self.result_format)
                         query_task = sdk.create_query_task(
                             models40.WriteCreateQueryTask(
                                 query_id=query,
-                                result_format=self.result_format,
+                                result_format=res_fmt,
                             ),
                             cache=False,
                         )
@@ -164,7 +165,7 @@ class DashboardQueriesUser(User):
                             raise ValueError(f"Failed to create query task: {query}")
                         
                         query_tasks.append(query_task)
-                        event_logger.log_event("query_task_created", task_id=query_task.id)
+                        event_logger.log_event("query_task_created", task_id=str(query_task.id))
                             
                     except Exception as e:
                         event_logger.log_event("query_task_failed", query_id=query, error=str(e))
@@ -176,7 +177,8 @@ class DashboardQueriesUser(User):
                     
                     completed_tasks = []
                     for qt in remaining_tasks:
-                        status = sdk.query_task_results(qt.id)
+                        qt_id = str(qt.id) if getattr(qt, "id", None) else ""
+                        status = sdk.query_task_results(qt_id)
                         event_logger.log_event("query_task_checked", task_id=qt.id, status=str(status))
                         
                         if isinstance(status, dict):

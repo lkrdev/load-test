@@ -27,7 +27,7 @@ from lkr.load_test.locustfile_qid import QueryUser
 from lkr.load_test.locustfile_render import RenderUser
 from lkr.load_test.locustfile_cookieless_embed_dashboard import CookielessEmbedDashboardUser
 from lkr.load_test.locustfile_dashboard_queries import DashboardQueriesUser
-from lkr.load_test.utils import get_external_group_id, get_dashboard_load_test_system_activity_explore_url
+from lkr.load_test.utils import get_external_group_id, get_system_activity_explore_url
 from lkr.utils.validate_api import validate_api_credentials
 from lkr.utils.version import get_version
 
@@ -291,9 +291,9 @@ def load_test_cookieless_embed_dashboard(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
-    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard])
+    explore_url = get_system_activity_explore_url(run_time, dashboard_ids=[dashboard])
     if explore_url:
-        typer.echo(f"\nTrack query history for the dashboard load test here:\n{explore_url}\n")
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
 
     class CookielessEmbedDashboardUserClass(CookielessEmbedDashboardUser):
         def __init__(self, *args, **kwargs):
@@ -398,9 +398,9 @@ def load_test(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
-    explore_url = get_dashboard_load_test_system_activity_explore_url(run_time, [dashboard] + (additional_dashboard or []))
+    explore_url = get_system_activity_explore_url(run_time, dashboard_ids=[dashboard] + (additional_dashboard or []))
     if explore_url:
-        typer.echo(f"\nTrack query history for the dashboard load test here:\n{explore_url}\n")
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
 
     # Process attributes into the expected format
 
@@ -533,6 +533,38 @@ def load_test_query(
         raise typer.BadParameter("At least one --query must be provided")
     if not model:
         raise typer.BadParameter("At least one --model must be provided")
+
+    resolved_queries: List[str] = []
+    query_slug_to_id: dict[str, str] = {}
+    try:
+        sdk = looker_sdk.init40()
+        for q in query:
+            try:
+                q_obj = sdk.query_for_slug(q)
+                if q_obj and (q_obj.slug or q_obj.id):
+                    canonical_slug = q_obj.slug or str(q_obj.id)
+                    if canonical_slug not in resolved_queries:
+                        resolved_queries.append(canonical_slug)
+                    if q_obj.id:
+                        query_slug_to_id[canonical_slug] = str(q_obj.id)
+                else:
+                    raise typer.BadParameter(f"Query slug '{q}' could not be resolved to a valid Query ID")
+            except typer.BadParameter:
+                raise
+            except Exception as e:
+                raise typer.BadParameter(f"Failed to resolve query slug '{q}': {e}")
+    except typer.BadParameter:
+        raise
+    except Exception as e:
+        raise typer.BadParameter(f"Failed to initialize Looker SDK for query resolution: {e}")
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+    explore_url = get_system_activity_explore_url(run_time, query_ids=resolved_queries)
+    if explore_url:
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
+
     from locust import between
 
     class QueryUserClass(QueryUser):
@@ -541,7 +573,8 @@ def load_test_query(
         def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.attributes = attribute
-            self.qid = query
+            self.qid = resolved_queries
+            self.query_slug_to_id = query_slug_to_id
             self.models = model
             self.result_format = "json_bi"
             self.query_async = query_async
@@ -668,6 +701,14 @@ def load_test_dashboard_queries(
         raise typer.BadParameter("At least one --dashboard must be provided")
     if not model:
         raise typer.BadParameter("At least one --model must be provided")
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+    explore_url = get_system_activity_explore_url(run_time, dashboard_ids=dashboard)
+    if explore_url:
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
+
     from locust import between
 
     class DashboardQueriesUserClass(DashboardQueriesUser):
@@ -787,6 +828,14 @@ def load_test_render(
         raise typer.BadParameter("--dashboard must be provided")
     if not model:
         raise typer.BadParameter("At least one --model must be provided")
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+    explore_url = get_system_activity_explore_url(run_time, dashboard_ids=[dashboard])
+    if explore_url:
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
+
     from locust import between
 
     class RenderUserClass(RenderUser):
@@ -949,6 +998,14 @@ def load_test_embed_observability(
     """
 
     from lkr.load_test.embed_dashboard_observability.embed_server import run_server
+
+    typer.echo(
+        f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
+    )
+    dashboards = [d.strip() for d in dashboard.split(",") if d.strip()]
+    explore_url = get_system_activity_explore_url(run_time, dashboard_ids=dashboards)
+    if explore_url:
+        typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
 
     # Start the embed server in a separate greenlet
     gevent.spawn(run_server, port, log_event_prefix)

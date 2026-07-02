@@ -113,6 +113,8 @@ class CookielessEmbedDashboardUser(User):
         self.driver = webdriver.Chrome(options=chrome_options)
 
     def on_start(self):
+        if not self.driver or not self.host:
+            return
         self.driver.get(self.host)
         try:
             # Waiting up to 2 seconds for embed iframe to be present...")
@@ -124,8 +126,9 @@ class CookielessEmbedDashboardUser(User):
         except Exception as e:
             print(f"Error waiting for iframe or handshake: {e}")
         finally:
-            for entry in self.driver.get_log('browser'):
-                print(entry)
+            if self.driver:
+                for entry in self.driver.get_log('browser'):
+                    print(entry)
     
     def on_stop(self):
         try:

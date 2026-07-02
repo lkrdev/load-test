@@ -119,9 +119,15 @@ def extract_looker_user_id_from_token(
         return None
 
 
-def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, dashboard_ids: List[str] | None = None) -> str | None:
+def get_system_activity_explore_url(
+    run_time_minutes: int,
+    dashboard_ids: List[str] | None = None,
+    query_ids: List[str] | None = None,
+) -> str | None:
     if dashboard_ids is None:
         dashboard_ids = []
+    if query_ids is None:
+        query_ids = []
     base_url = os.environ.get("LOOKERSDK_BASE_URL", "")
     if not base_url:
         return None
@@ -154,9 +160,14 @@ def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, d
 
     fields_str = "history.created_minute,history.query_run_count,user.count"
     pivots_str = None
+    filter_id = 2
+
     if len(dashboard_ids) > 1:
         fields_str += ",dashboard.title"
         pivots_str = "dashboard.title"
+    elif len(query_ids) > 1:
+        fields_str += ",query.slug"
+        pivots_str = "query.slug"
 
     query_params = {
         "fields": fields_str,
@@ -180,10 +191,31 @@ def get_dashboard_load_test_system_activity_explore_url(run_time_minutes: int, d
                     {"constant": dashboards_str},
                     {}
                 ],
-                "id": 2
+                "id": filter_id
             }
         ]
+        filter_id += 1
+
+    if query_ids:
+        queries_str = ",".join(query_ids)
+        query_params["f[query.slug]"] = queries_str
+        filter_config["query.slug"] = [
+            {
+                "type": "=",
+                "values": [
+                    {"constant": queries_str},
+                    {}
+                ],
+                "id": filter_id
+            }
+        ]
+        filter_id += 1
 
     query_params["filter_config"] = json.dumps(filter_config, separators=(',', ':'))
 
     return f"https://{hostname}/explore/system__activity/history?{urlencode(query_params)}"
+
+
+get_dashboard_load_test_system_activity_explore_url = get_system_activity_explore_url
+get_load_test_system_activity_explore_url = get_system_activity_explore_url
+

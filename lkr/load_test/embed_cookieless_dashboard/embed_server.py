@@ -5,7 +5,6 @@ from pathlib import Path
 import looker_sdk
 from looker_sdk import models40
 from lkr.load_test.utils import (
-    MAX_SESSION_LENGTH,
     PERMISSIONS,
     get_user_id,
     format_attributes,
@@ -70,10 +69,11 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                 embed_domain=f"http://127.0.0.1:{self.port}"
             )
 
+            user_agent = self.headers.get('User-Agent') or ""
             try:
                 response = self.sdk.acquire_embed_cookieless_session(
                     body=user_session,
-                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
+                    transport_options={'headers': {'User-Agent': user_agent}}
                 )
                 self.wfile.write(json.dumps({
                     'api_token': response.api_token,
@@ -115,9 +115,10 @@ class CookielessEmbedHandler(BaseHTTPRequestHandler):
                     api_token=api_token,
                     navigation_token=navigation_token
                 )
+                user_agent = self.headers.get('User-Agent') or ""
                 response = self.sdk.generate_tokens_for_cookieless_session(
                     body=session_information,
-                    transport_options={'headers':{'User-Agent': self.headers.get('User-Agent')}}
+                    transport_options={'headers': {'User-Agent': user_agent}}
                 )
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')

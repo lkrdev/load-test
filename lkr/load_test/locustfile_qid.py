@@ -87,6 +87,7 @@ class QueryUser(User):
         self.sdk: Looker40SDK | None = None
         self.user_id = get_user_id()
         self.qid: List[str] = []
+        self.query_slug_to_id: Dict[str, str] = {}
         self.models: List[str] = []
         self.queries: Dict[str, models40.Query] = {}
         self.result_format: str = "json_bi"
@@ -155,14 +156,17 @@ class QueryUser(User):
             for query in selected_queries:
                 start_time = time.time()
                 if query not in self.queries:
-                    try:
-                        x = sdk.query_for_slug(query)
-                        self.queries[query] = x
-                        if not ts.lookup_query:
-                            ts.lookup_query = datetime.datetime.now()
-                    except Exception as e:
-                        self.environment.events.request.fire(request_type="query_for_slug", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
-                        continue
+                    if query in self.query_slug_to_id:
+                        self.queries[query] = models40.Query(id=self.query_slug_to_id[query], slug=query, model="", view="")
+                    else:
+                        try:
+                            x = sdk.query_for_slug(query)
+                            self.queries[query] = x
+                            if not ts.lookup_query:
+                                ts.lookup_query = datetime.datetime.now()
+                        except Exception as e:
+                            self.environment.events.request.fire(request_type="query_for_slug", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                            continue
 
                 query_obj = self.queries.get(query)
                 if not query_obj or not query_obj.id:
@@ -238,7 +242,14 @@ class QueryUser(User):
             for q in selected_queries:
                 start_time = time.time()
                 try:
-                    res = sdk.run_query(q, result_format=self.result_format, cache=False)
+                    if q not in self.queries:
+                        if q in self.query_slug_to_id:
+                            self.queries[q] = models40.Query(id=self.query_slug_to_id[q], slug=q, model="", view="")
+                        else:
+                            self.queries[q] = sdk.query_for_slug(q)
+                    query_obj = self.queries.get(q)
+                    qid = str(query_obj.id) if query_obj and query_obj.id else q
+                    res = sdk.run_query(qid, result_format=self.result_format, cache=False)
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
                 except Exception as e:
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, exception=e)
@@ -246,6 +257,8 @@ class QueryUser(User):
         ts.end = datetime.datetime.now()
         logger.info(
             "run_query",
+            selected_queries=selected_queries,
+            selected_count=len(selected_queries),
             time_taken=(ts.end - ts.start).total_seconds(),
             steps=ts.log_steps(),
         )
