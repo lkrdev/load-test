@@ -535,6 +535,7 @@ def load_test_query(
         raise typer.BadParameter("At least one --model must be provided")
 
     resolved_queries: List[str] = []
+    query_slug_to_id: dict[str, str] = {}
     try:
         sdk = looker_sdk.init40()
         for q in query:
@@ -544,8 +545,12 @@ def load_test_query(
                     canonical_slug = q_obj.slug or str(q_obj.id)
                     if canonical_slug not in resolved_queries:
                         resolved_queries.append(canonical_slug)
+                    if q_obj.id:
+                        query_slug_to_id[canonical_slug] = str(q_obj.id)
                 else:
                     raise typer.BadParameter(f"Query slug '{q}' could not be resolved to a valid Query ID")
+            except typer.BadParameter:
+                raise
             except Exception as e:
                 raise typer.BadParameter(f"Failed to resolve query slug '{q}': {e}")
     except typer.BadParameter:
@@ -569,6 +574,7 @@ def load_test_query(
             super().__init__(*args, **kwargs)
             self.attributes = attribute
             self.qid = resolved_queries
+            self.query_slug_to_id = query_slug_to_id
             self.models = model
             self.result_format = "json_bi"
             self.query_async = query_async
