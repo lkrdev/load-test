@@ -238,7 +238,11 @@ class QueryUser(User):
             for q in selected_queries:
                 start_time = time.time()
                 try:
-                    res = sdk.run_query(q, result_format=self.result_format, cache=False)
+                    if q not in self.queries:
+                        self.queries[q] = sdk.query_for_slug(q)
+                    query_obj = self.queries.get(q)
+                    qid = str(query_obj.id) if query_obj and query_obj.id else q
+                    res = sdk.run_query(qid, result_format=self.result_format, cache=False)
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
                 except Exception as e:
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, exception=e)
@@ -246,6 +250,8 @@ class QueryUser(User):
         ts.end = datetime.datetime.now()
         logger.info(
             "run_query",
+            selected_queries=selected_queries,
+            selected_count=len(selected_queries),
             time_taken=(ts.end - ts.start).total_seconds(),
             steps=ts.log_steps(),
         )

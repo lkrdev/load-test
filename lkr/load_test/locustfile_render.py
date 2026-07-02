@@ -41,6 +41,7 @@ class RenderUser(User):
         self.render_bail_out: int = 120
         self.group_ids: List[str] = []
         self.external_group_id: str | None = None
+        self.first_name: str = "Embed"
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()

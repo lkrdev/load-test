@@ -1,6 +1,6 @@
 import os
 import urllib.parse
-from typing import List, Optional
+from typing import List
 from uuid import uuid4
 import requests
 import looker_sdk
@@ -50,6 +50,7 @@ class DashboardUserObservability(User):
         self.debug: bool = False
         self.embed_as_me: bool = False
         self.embed_user_id: str = ""
+        self.first_name: str = "Embed"
     
     def _return_dashboard(self):
         return self.dashboard.split(',')[0]

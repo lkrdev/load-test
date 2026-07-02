@@ -2,7 +2,7 @@ from lkr.load_test.utils import (
     check_random_int_format,
     format_attributes,
     get_user_id,
-    get_dashboard_load_test_system_activity_explore_url,
+    get_system_activity_explore_url,
 )
 
 
@@ -10,13 +10,13 @@ def test_check_random_int_format_valid():
     # Test valid random.randint format
     is_valid, value = check_random_int_format("random.randint(0,100)")
     assert is_valid is True
-    assert value.isdigit()
-    assert 0 <= int(value) <= 100
+    assert value is not None and value.isdigit()
+    assert value is not None and 0 <= int(value) <= 100
 
     is_valid, value = check_random_int_format("random.randint(1000,2000)")
     assert is_valid is True
-    assert value.isdigit()
-    assert 1000 <= int(value) <= 2000
+    assert value is not None and value.isdigit()
+    assert value is not None and 1000 <= int(value) <= 2000
 
     is_valid, value = check_random_int_format("random.randint(0.2,1000000)")
     assert is_valid is False
@@ -76,14 +76,14 @@ def test_get_user_id():
     assert len(set(user_ids)) == 100  # All IDs should be unique
 
 
-def test_get_dashboard_load_test_system_activity_explore_url(monkeypatch):
+def test_get_system_activity_explore_url(monkeypatch):
     # Mock environment variable
     monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
 
     from urllib.parse import urlparse, parse_qs
     import json
 
-    url = get_dashboard_load_test_system_activity_explore_url(5)
+    url = get_system_activity_explore_url(5)
     assert url is not None
 
     parsed = urlparse(url)
@@ -118,12 +118,12 @@ def test_get_dashboard_load_test_system_activity_explore_url(monkeypatch):
     assert "f[history.real_dash_id]" not in query_params
 
 
-def test_get_dashboard_load_test_system_activity_explore_url_single_dashboard(monkeypatch):
+def test_get_system_activity_explore_url_single_dashboard(monkeypatch):
     monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
 
     from urllib.parse import urlparse, parse_qs
 
-    url = get_dashboard_load_test_system_activity_explore_url(5, ["1"])
+    url = get_system_activity_explore_url(5, ["1"])
     assert url is not None
 
     parsed = urlparse(url)
@@ -133,14 +133,14 @@ def test_get_dashboard_load_test_system_activity_explore_url_single_dashboard(mo
     assert query_params["f[history.real_dash_id]"] == ["1"]
 
 
-def test_get_dashboard_load_test_system_activity_explore_url_with_dashboards(monkeypatch):
+def test_get_system_activity_explore_url_with_dashboards(monkeypatch):
     # Mock environment variable
     monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
 
     from urllib.parse import urlparse, parse_qs
     import json
 
-    url = get_dashboard_load_test_system_activity_explore_url(5, ["1", "2", "3"])
+    url = get_system_activity_explore_url(5, ["1", "2", "3"])
     assert url is not None
 
     parsed = urlparse(url)
@@ -161,3 +161,28 @@ def test_get_dashboard_load_test_system_activity_explore_url_with_dashboards(mon
     assert filters[0]["type"] == "="
     assert filters[0]["id"] == 2
     assert filters[0]["values"][0]["constant"] == "1,2,3"
+
+
+def test_get_system_activity_explore_url_with_query_ids(monkeypatch):
+    monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
+
+    from urllib.parse import urlparse, parse_qs
+    import json
+
+    url = get_system_activity_explore_url(5, query_ids=["qid1", "qid2"])
+    assert url is not None
+
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+    assert query_params["fields"] == ["history.created_minute,history.query_run_count,user.count,query.slug"]
+    assert query_params["pivots"] == ["query.slug"]
+    assert query_params["f[query.slug]"] == ["qid1,qid2"]
+
+    filter_config = json.loads(query_params["filter_config"][0])
+    assert "query.slug" in filter_config
+    filters = filter_config["query.slug"]
+    assert len(filters) == 1
+    assert filters[0]["type"] == "="
+    assert filters[0]["id"] == 2
+    assert filters[0]["values"][0]["constant"] == "qid1,qid2"
+
