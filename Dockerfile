@@ -18,6 +18,6 @@ RUN uv sync --frozen --no-dev --no-editable
 
 # Create a non-root user and switch to it
 RUN useradd -m --no-log-init appuser && \
-    chown -R appuser:appuser /app
+    chown appuser:appuser /app
 USER appuser
 
