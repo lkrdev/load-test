@@ -14,8 +14,10 @@ COPY lkr ./lkr
 ENV SE_OFFLINE=true
 ENV SE_AVOID_STATS=true
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev --no-editable
 
 # Create a non-root user and switch to it
-RUN useradd -m --no-log-init appuser
+RUN useradd -m --no-log-init appuser && \
+    chown -R appuser:appuser /app
 USER appuser
+
