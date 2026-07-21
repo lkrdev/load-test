@@ -165,22 +165,22 @@ class QueryUser(User):
                             if not ts.lookup_query:
                                 ts.lookup_query = datetime.datetime.now()
                         except Exception as e:
-                            self.environment.events.request.fire(request_type="query_for_slug", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                            self.environment.events.request.fire(request_type="query_for_slug", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)
                             continue
 
                 query_obj = self.queries.get(query)
                 if not query_obj or not query_obj.id:
-                    self.environment.events.request.fire(request_type="lookup_query", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Query object or its id is None for {query}"))
+                    self.environment.events.request.fire(request_type="lookup_query", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=Exception(f"Query object or its id is None for {query}"))
                     continue
                 # Use the correct ResultFormat enum if available, else raise
                 if hasattr(models40, "ResultFormat"):
                     try:
                         result_format = models40.ResultFormat(self.result_format)
                     except Exception as e:
-                        self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                        self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)
                         continue
                 else:
-                    self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception("models40.ResultFormat not available"))
+                    self.environment.events.request.fire(request_type="result_format", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=Exception("models40.ResultFormat not available"))
                     continue
 
                 try:
@@ -198,11 +198,11 @@ class QueryUser(User):
                         or not getattr(task, "id", None)
                         or not isinstance(task.id, str)
                     ):
-                        self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Query task or its id is None or not a string for {query}"))
+                        self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=Exception(f"Query task or its id is None or not a string for {query}"))
                         continue
                     query_tasks.append((task.id, start_time))
                 except Exception as e:
-                    self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                    self.environment.events.request.fire(request_type="create_query_task", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)
 
             remaining_tasks = list(query_tasks)
             for _i in range(self.async_bail_out):
@@ -221,13 +221,13 @@ class QueryUser(User):
                                 errors = finish_task.get("errors")
                                 if errors is not None:
                                     completed_tasks.append(task_info)
-                                    self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Error in query task {task_id}: {errors}"))
+                                    self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=Exception(f"Error in query task {task_id}: {errors}"))
                         elif hasattr(finish_task, "status") and finish_task.status == "complete":
                             completed_tasks.append(task_info)
                             self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=len(str(finish_task)))
                     except Exception as e:
                         completed_tasks.append(task_info)
-                        self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=e)
+                        self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)
                 for task_info in completed_tasks:
                     remaining_tasks.remove(task_info)
                 if remaining_tasks:
@@ -235,7 +235,7 @@ class QueryUser(User):
 
             for task_info in remaining_tasks:
                 task_id, start_time = task_info
-                self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, exception=Exception(f"Timeout waiting for async task {task_id} after {self.async_bail_out}s"))
+                self.environment.events.request.fire(request_type="query_task_results", name="run_query_async", response_time=(time.time() - start_time) * 1000, response_length=0, exception=Exception(f"Timeout waiting for async task {task_id} after {self.async_bail_out}s"))
 
             ts.finish_task = datetime.datetime.now()
         else:
@@ -252,7 +252,7 @@ class QueryUser(User):
                     res = sdk.run_query(qid, result_format=self.result_format, cache=False)
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
                 except Exception as e:
-                    self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, exception=e)
+                    self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)
             ts.run_query = datetime.datetime.now()
         ts.end = datetime.datetime.now()
         logger.info(
