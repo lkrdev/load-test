@@ -1,3 +1,4 @@
+import lkr.main  # noqa: F401 - ensure monkey patch runs first
 from lkr.load_test.utils import (
     check_random_int_format,
     format_attributes,
@@ -185,6 +186,18 @@ def test_get_system_activity_explore_url_with_query_ids(monkeypatch):
     assert filters[0]["type"] == "="
     assert filters[0]["id"] == 2
     assert filters[0]["values"][0]["constant"] == "qid1,qid2"
+
+
+def test_safe_get_ident_fallback():
+    import _thread
+    import threading
+    from lkr.main import _safe_get_ident
+
+    # Verify safe_get_ident returns an integer ident normally and falls back on RuntimeError
+    ident = _safe_get_ident()
+    assert isinstance(ident, int)
+    assert threading.get_ident() == ident
+
 
 
 

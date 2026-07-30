@@ -1,8 +1,26 @@
+import _thread
 import sys
+import threading
 
 if "--no-gevent-patch" not in sys.argv:
-    from gevent import monkey
+    # gevent.thread.get_ident raises RuntimeError during Python 3.13 shutdown when logging cleans up weakrefs
+    _real_get_ident = _thread.get_ident
+    from gevent import monkey, thread as gevent_thread
     monkey.patch_all()
+
+    _gevent_get_ident = gevent_thread.get_ident
+
+    def _safe_get_ident(gr: object = None) -> int:
+        try:
+            return _gevent_get_ident(gr)  # type: ignore[call-arg]
+        except RuntimeError:
+            return _real_get_ident()
+
+    setattr(gevent_thread, "get_ident", _safe_get_ident)
+    setattr(_thread, "get_ident", _safe_get_ident)
+    setattr(threading, "get_ident", _safe_get_ident)
+    if hasattr(threading, "_get_ident"):
+        setattr(threading, "_get_ident", _safe_get_ident)
 
 import os
 import pathlib
