@@ -123,6 +123,7 @@ def get_system_activity_explore_url(
     run_time_minutes: int,
     dashboard_ids: List[str] | None = None,
     query_ids: List[str] | None = None,
+    include_cache_metrics: bool = False,
 ) -> str | None:
     if dashboard_ids is None:
         dashboard_ids = []
@@ -158,16 +159,24 @@ def get_system_activity_explore_url(
         ]
     }
 
-    fields_str = "history.created_minute,history.query_run_count,user.count"
+    fields_list = ["history.created_minute", "history.query_run_count", "user.count"]
+    if include_cache_metrics:
+        fields_list.extend([
+            "history.cache_result_query_count",
+            "history.database_result_query_count",
+        ])
+
     pivots_str = None
     filter_id = 2
 
     if len(dashboard_ids) > 1:
-        fields_str += ",dashboard.title"
+        fields_list.append("dashboard.title")
         pivots_str = "dashboard.title"
     elif len(query_ids) > 1:
-        fields_str += ",query.slug"
+        fields_list.append("query.slug")
         pivots_str = "query.slug"
+
+    fields_str = ",".join(fields_list)
 
     query_params = {
         "fields": fields_str,
@@ -180,6 +189,34 @@ def get_system_activity_explore_url(
 
     if pivots_str is not None:
         query_params["pivots"] = pivots_str
+
+    if include_cache_metrics:
+        query_params["vis"] = json.dumps(
+            {
+                "table_theme": "modern",
+                "modern2026": True,
+                "hidden_fields": [
+                    "history.cache_result_query_count",
+                    "history.database_result_query_count",
+                ],
+            },
+            separators=(",", ":"),
+        )
+        query_params["dynamic_fields"] = json.dumps(
+            [
+                {
+                    "category": "table_calculation",
+                    "expression": "${history.cache_result_query_count} / (${history.cache_result_query_count} + ${history.database_result_query_count})",
+                    "label": "Cache Hit Rate",
+                    "value_format": None,
+                    "value_format_name": "percent_2",
+                    "_kind_hint": "measure",
+                    "table_calculation": "cache_hit_rate",
+                    "_type_hint": "number",
+                }
+            ],
+            separators=(",", ":"),
+        )
 
     if dashboard_ids:
         dashboards_str = ",".join(dashboard_ids)

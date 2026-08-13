@@ -180,12 +180,55 @@ def test_get_system_activity_explore_url_with_query_ids(monkeypatch):
     assert query_params["f[query.slug]"] == ["qid1,qid2"]
 
     filter_config = json.loads(query_params["filter_config"][0])
-    assert "query.slug" in filter_config
+    assert filter_config["query.slug"]
     filters = filter_config["query.slug"]
     assert len(filters) == 1
     assert filters[0]["type"] == "="
     assert filters[0]["id"] == 2
     assert filters[0]["values"][0]["constant"] == "qid1,qid2"
+
+
+def test_get_system_activity_explore_url_with_cache_metrics(monkeypatch):
+    monkeypatch.setenv("LOOKERSDK_BASE_URL", "https://myinstance.looker.com")
+
+    from urllib.parse import urlparse, parse_qs
+    import json
+
+    url = get_system_activity_explore_url(
+        5, query_ids=["qid1", "qid2"], include_cache_metrics=True
+    )
+    assert url is not None
+
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+
+    fields = query_params["fields"][0].split(",")
+    assert "history.created_minute" in fields
+    assert "history.query_run_count" in fields
+    assert "user.count" in fields
+    assert "history.cache_result_query_count" in fields
+    assert "history.database_result_query_count" in fields
+    assert "query.slug" in fields
+
+    assert "vis" in query_params
+    vis = json.loads(query_params["vis"][0])
+    assert vis["table_theme"] == "modern"
+    assert vis["modern2026"] is True
+    assert vis["hidden_fields"] == [
+        "history.cache_result_query_count",
+        "history.database_result_query_count",
+    ]
+
+    assert "dynamic_fields" in query_params
+    dynamic_fields = json.loads(query_params["dynamic_fields"][0])
+    assert len(dynamic_fields) == 1
+    assert dynamic_fields[0]["category"] == "table_calculation"
+    assert (
+        dynamic_fields[0]["expression"]
+        == "${history.cache_result_query_count} / (${history.cache_result_query_count} + ${history.database_result_query_count})"
+    )
+    assert dynamic_fields[0]["label"] == "Cache Hit Rate"
+    assert dynamic_fields[0]["table_calculation"] == "cache_hit_rate"
 
 
 def test_safe_get_ident_fallback():
@@ -197,6 +240,31 @@ def test_safe_get_ident_fallback():
     ident = _safe_get_ident()
     assert isinstance(ident, int)
     assert threading.get_ident() == ident
+
+
+def test_query_user_should_use_cache(monkeypatch):
+    from lkr.load_test.locustfile_qid import QueryUser
+
+    user = QueryUser.__new__(QueryUser)
+
+    user.cache_percent = 0.0
+    assert user._should_use_cache() is False
+
+    user.cache_percent = 100.0
+    assert user._should_use_cache() is True
+
+    user.cache_percent = 1.0
+    monkeypatch.setattr("random.random", lambda: 0.009)
+    assert user._should_use_cache() is True
+    monkeypatch.setattr("random.random", lambda: 0.011)
+    assert user._should_use_cache() is False
+
+    user.cache_percent = 50.0
+    monkeypatch.setattr("random.random", lambda: 0.49)
+    assert user._should_use_cache() is True
+    monkeypatch.setattr("random.random", lambda: 0.51)
+    assert user._should_use_cache() is False
+
 
 
 

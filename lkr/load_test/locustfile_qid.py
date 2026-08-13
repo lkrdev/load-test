@@ -99,6 +99,11 @@ class QueryUser(User):
         self.group_ids: List[str] = []
         self.external_group_id: str | None = None
         self.first_name: str = "Embed"
+        self.cache_percent: float = 0.0
+
+    def _should_use_cache(self) -> bool:
+        prob = self.cache_percent / 100.0
+        return random.random() < prob if prob > 0 else False
 
     def _init_sdk(self):
         sdk = looker_sdk.init40()
@@ -189,7 +194,7 @@ class QueryUser(User):
                             query_id=query_obj.id,
                             result_format=result_format,
                         ),
-                        cache=False,
+                        cache=self._should_use_cache(),
                     )
                     if not ts.task:
                         ts.task = datetime.datetime.now()
@@ -249,7 +254,9 @@ class QueryUser(User):
                             self.queries[q] = sdk.query_for_slug(q)
                     query_obj = self.queries.get(q)
                     qid = str(query_obj.id) if query_obj and query_obj.id else q
-                    res = sdk.run_query(qid, result_format=self.result_format, cache=False)
+                    res = sdk.run_query(
+                        qid, result_format=self.result_format, cache=self._should_use_cache()
+                    )
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=len(str(res)))
                 except Exception as e:
                     self.environment.events.request.fire(request_type="run_query", name="run_query_sync", response_time=(time.time() - start_time) * 1000, response_length=0, exception=e)

@@ -543,6 +543,14 @@ def load_test_query(
             min=1,
         ),
     ] = 1,
+    cache_percent: Annotated[
+        float,
+        typer.Option(
+            help="Percentage of queries to run with cache enabled (0 to 100)",
+            min=0.0,
+            max=100.0,
+        ),
+    ] = 0.0,
 ):
     """
     Run a load test by executing specific queries by ID.
@@ -579,7 +587,11 @@ def load_test_query(
     typer.echo(
         f"Running load test with {users} users, {spawn_rate} spawn rate, and {run_time} minutes"
     )
-    explore_url = get_system_activity_explore_url(run_time, query_ids=resolved_queries)
+    explore_url = get_system_activity_explore_url(
+        run_time,
+        query_ids=resolved_queries,
+        include_cache_metrics=cache_percent > 0,
+    )
     if explore_url:
         typer.echo(f"\nTrack query history for the load test here:\n{explore_url}\n")
 
@@ -604,6 +616,7 @@ def load_test_query(
             )
             self.max_queries_per_task = max_queries_per_task
             self.first_name = first_name
+            self.cache_percent = cache_percent
 
     from locust import events
     from locust.env import Environment
