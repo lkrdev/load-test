@@ -546,7 +546,7 @@ def load_test_query(
     cache_percent: Annotated[
         float,
         typer.Option(
-            help="Percentage of queries to run with cache enabled (0.0 to 1.0 or 0 to 100)",
+            help="Percentage of queries to run with cache enabled (0 to 100)",
             min=0.0,
             max=100.0,
         ),

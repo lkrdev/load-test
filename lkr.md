@@ -144,7 +144,7 @@ $ lkr load-test query [OPTIONS]
 * `--async-bail-out INTEGER`: How many iterations to wait for the async query to complete (roughly number of seconds)  [default: 120]
 * `--first-name TEXT`: First name of the embed user  [default: Embed]
 * `--max-queries-per-task INTEGER RANGE`: Maximum number of unique queries to execute per task iteration  [default: 1; x&gt;=1]
-* `--cache-percent FLOAT RANGE`: Percentage of queries to run with cache enabled (0.0 to 1.0 or 0 to 100)  [default: 0.0; 0.0&lt;=x&lt;=100.0]
+* `--cache-percent FLOAT RANGE`: Percentage of queries to run with cache enabled (0 to 100)  [default: 0.0; 0.0&lt;=x&lt;=100.0]
 * `--help`: Show this message and exit.
 
 ### `lkr load-test dashboard-queries`

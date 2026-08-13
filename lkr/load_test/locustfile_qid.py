@@ -102,12 +102,7 @@ class QueryUser(User):
         self.cache_percent: float = 0.0
 
     def _should_use_cache(self) -> bool:
-        # accepts 0.0-1.0 probability or 0-100 percentage
-        prob = (
-            self.cache_percent / 100.0
-            if self.cache_percent > 1.0
-            else self.cache_percent
-        )
+        prob = self.cache_percent / 100.0
         return random.random() < prob if prob > 0 else False
 
     def _init_sdk(self):

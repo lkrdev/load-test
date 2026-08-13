@@ -254,12 +254,9 @@ def test_query_user_should_use_cache(monkeypatch):
     assert user._should_use_cache() is True
 
     user.cache_percent = 1.0
+    monkeypatch.setattr("random.random", lambda: 0.009)
     assert user._should_use_cache() is True
-
-    user.cache_percent = 0.5
-    monkeypatch.setattr("random.random", lambda: 0.49)
-    assert user._should_use_cache() is True
-    monkeypatch.setattr("random.random", lambda: 0.51)
+    monkeypatch.setattr("random.random", lambda: 0.011)
     assert user._should_use_cache() is False
 
     user.cache_percent = 50.0
