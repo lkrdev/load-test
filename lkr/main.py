@@ -24,7 +24,8 @@ if "--no-gevent-patch" not in sys.argv:
 
 import os
 import pathlib
-from concurrent.futures import ThreadPoolExecutor, as_completed, wait
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated, List, Optional
@@ -1088,7 +1089,7 @@ def delete_embed_users(
         typer.Option(
             help="First name of the user to remove",
         ),
-    ] = "Embed",
+    ] = None,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -1098,7 +1099,13 @@ def delete_embed_users(
     limit: Annotated[
         int,
         typer.Option(
-            help="Limit the number of users to remove",
+            help="Limit the number of users to remove (-1 for all)",
+        ),
+    ] = 100,
+    page_size: Annotated[
+        int,
+        typer.Option(
+            help="Number of users to fetch per API request",
         ),
     ] = 100,
 ):
@@ -1107,75 +1114,72 @@ def delete_embed_users(
     """
 
     sdk = looker_sdk.init40()
-    all_users: List[User] = []
-    offset = 0
-    batch_size = 10  # Number of concurrent get_users calls
     if not first_name:
         typer.echo("No first name provided, will delete all embed users")
 
-    def get_users(*, first_name: str | None, limit: int, offset: int):
-        return sdk.search_users(
-            first_name=first_name if first_name else None,
+    if limit == 0:
+        typer.echo("Limit set to 0, no users will be processed")
+        return
+
+    all_users: list[User] = []
+    offset = 0
+
+    while True:
+        fetch_limit = (
+            min(page_size, limit - len(all_users))
+            if limit != -1
+            else page_size
+        )
+        batch = sdk.search_users(
+            first_name=first_name or None,
             embed_user=True,
-            limit=limit,
+            sorts="id",
+            limit=fetch_limit,
             offset=offset,
             fields="id,first_name,last_name",
         )
-
-    while True:
-        futures = []
-        with ThreadPoolExecutor(max_workers=batch_size) as executor:
-            # Submit batch_size number of get_users calls
-            for i in range(batch_size):
-                futures.append(
-                    executor.submit(
-                        get_users,
-                        first_name=first_name,
-                        limit=limit,
-                        offset=offset + (i * limit),
-                    )
-                )
-
-            # Wait for all futures to complete
-            wait(futures)
-
-            # Check results and collect users
-            should_continue = True
-            for future in futures:
-                response = future.result()
-                if len(response) != limit:
-                    should_continue = False
-                all_users.extend(response)
-
-            # If any response had less than limit users, we've found all users
-            if not should_continue:
-                break
-
-            # Move offset for next batch
-            offset += batch_size * limit
+        if not batch:
+            break
+        all_users.extend(batch)
+        if (limit != -1 and len(all_users) >= limit) or len(batch) < fetch_limit:
+            break
+        offset += len(batch)
 
     if dry_run:
         typer.echo(f"Found {len(all_users)} users")
         return
-    else:
-        typer.echo(f"Deleting {len(all_users)} users")
-        # Process the found users in parallel
-        with ThreadPoolExecutor(max_workers=batch_size) as executor:
-            futures = []
-            for user in all_users:
-                if user.id:
-                    futures.append(executor.submit(sdk.delete_user, user.id))
 
-            # Wait for all deletions to complete
-            for future in as_completed(futures):
-                try:
-                    future.result()
-                    user = all_users[futures.index(future)]
-                    typer.echo(
-                        f"Deleted user {user.first_name} {user.last_name} ({user.id})"
-                    )
-                except Exception as e:
-                    typer.echo(f"Error deleting user: {str(e)}")
+    typer.echo(f"Deleting {len(all_users)} users")
+
+    def delete_user(user_id: str) -> None:
+        for attempt in range(4):
+            try:
+                sdk.delete_user(user_id)
+                return
+            except Exception as e:
+                # ponytail: backoff 1s, 2s, 4s on Looker rate limit (429); raise otherwise
+                err = str(e).lower()
+                if ("429" in err or "rate limit" in err) and attempt < 3:
+                    time.sleep(2**attempt)
+                    continue
+                raise
+
+    # ponytail: 5 workers balances speed without hammering Looker DB lock contention
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_user = {
+            executor.submit(delete_user, user.id): user
+            for user in all_users
+            if user.id
+        }
+        for future in as_completed(future_to_user):
+            user = future_to_user[future]
+            try:
+                future.result()
+                typer.echo(
+                    f"Deleted user {user.first_name} {user.last_name} ({user.id})"
+                )
+            except Exception as e:
+                typer.echo(f"Error deleting user {user.id}: {e}")
 
 if __name__ == "__main__":
     app()

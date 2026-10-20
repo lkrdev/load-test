@@ -67,21 +67,17 @@ def format_attributes(
     formatted_attributes: Dict[str, str] = {}
     if attributes:
         for attr in attributes:
-            valid = True
             split_attr = [x.strip() for x in attr.split(seperator) if x.strip()]
             if len(split_attr) == 2:
-                val = split_attr[1]
-                # regex to check if for string random.randint(0,1000000)
-                is_valid, new_val = check_random_int_format(val)
-                if is_valid and new_val is not None:
-                    split_attr[1] = new_val
-                    formatted_attributes[split_attr[0]] = split_attr[1]
+                key, val = split_attr
+                if val.startswith("random.randint"):
+                    is_valid, new_val = check_random_int_format(val)
+                    if is_valid and new_val is not None:
+                        formatted_attributes[key] = new_val
+                    else:
+                        invalid_attribute_format(attr)
                 else:
-                    valid = False
-            else:
-                valid = False
-            if valid:
-                formatted_attributes[split_attr[0]] = split_attr[1]
+                    formatted_attributes[key] = val
             else:
                 invalid_attribute_format(attr)
 

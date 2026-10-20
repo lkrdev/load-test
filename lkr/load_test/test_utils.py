@@ -47,10 +47,14 @@ def test_format_attributes():
     # Test with valid random.randint attributes
     attributes = ["key1:random.randint(0,100)", "key2:random.randint(1000,2000)"]
     formatted = format_attributes(attributes)
-    print(formatted)
     assert len(formatted) == 2
     assert int(formatted["key1"]) >= 0 and int(formatted["key1"]) <= 100
     assert int(formatted["key2"]) >= 1000 and int(formatted["key2"]) <= 2000
+
+    # Test with static attributes
+    static_attributes = ["store:10", "region:west"]
+    formatted_static = format_attributes(static_attributes)
+    assert formatted_static == {"store": "10", "region": "west"}
 
     # Test with empty list
     assert format_attributes([]) == {}
@@ -264,6 +268,70 @@ def test_query_user_should_use_cache(monkeypatch):
     assert user._should_use_cache() is True
     monkeypatch.setattr("random.random", lambda: 0.51)
     assert user._should_use_cache() is False
+
+
+def test_delete_embed_users_limit_and_pagination(monkeypatch):
+    from unittest.mock import MagicMock
+    from lkr.main import delete_embed_users
+
+    mock_sdk = MagicMock()
+    mock_users = [
+        MagicMock(id=str(i), first_name="Test", last_name=f"User{i}")
+        for i in range(250)
+    ]
+
+    def mock_search_users(
+        first_name=None,
+        embed_user=True,
+        sorts=None,
+        limit=100,
+        offset=0,
+        fields=None,
+    ):
+        return mock_users[offset : offset + limit]
+
+    mock_sdk.search_users.side_effect = mock_search_users
+    monkeypatch.setattr("looker_sdk.init40", lambda: mock_sdk)
+
+    # Test limit=50 stops after fetching 50 users and deletes exactly 50
+    delete_embed_users(first_name="Test", dry_run=False, limit=50, page_size=100)
+    assert mock_sdk.delete_user.call_count == 50
+    assert mock_sdk.search_users.call_count == 1
+
+    # Test limit=-1 fetches all 250 users across pages of 100
+    mock_sdk.delete_user.reset_mock()
+    mock_sdk.search_users.reset_mock()
+    delete_embed_users(first_name="Test", dry_run=False, limit=-1, page_size=100)
+    assert mock_sdk.delete_user.call_count == 250
+    assert mock_sdk.search_users.call_count == 3
+
+
+def test_delete_embed_users_429_retry(monkeypatch):
+    from unittest.mock import MagicMock
+    from lkr.main import delete_embed_users
+
+    mock_sdk = MagicMock()
+    mock_users = [MagicMock(id="user-123", first_name="Test", last_name="User")]
+    mock_sdk.search_users.return_value = mock_users
+
+    attempts = 0
+
+    def mock_delete(user_id):
+        nonlocal attempts
+        attempts += 1
+        if attempts < 3:
+            raise Exception("SDKError: HTTP 429 Rate limit exceeded")
+        return ""
+
+    mock_sdk.delete_user.side_effect = mock_delete
+    monkeypatch.setattr("looker_sdk.init40", lambda: mock_sdk)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    delete_embed_users(first_name="Test", dry_run=False, limit=1)
+    assert attempts == 3
+    assert mock_sdk.delete_user.call_count == 3
+
+
 
 
 
